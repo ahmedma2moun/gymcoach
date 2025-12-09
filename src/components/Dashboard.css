@@ -32,6 +32,7 @@
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.05);
     margin-bottom: 2rem;
+    transition: all 0.3s ease;
 }
 
 .dash-card h2,
@@ -39,6 +40,45 @@
     margin-bottom: 1.5rem;
     color: var(--primary);
 }
+
+/* Completed Plan Styles */
+.plan-card.completed-plan {
+    opacity: 0.7;
+    border-color: rgba(255, 255, 255, 0.02);
+}
+
+.plan-card.completed-plan h3 {
+    text-decoration: line-through;
+    color: var(--text-dim);
+    margin-bottom: 0;
+    /* Remove margin when collapsed mostly */
+    display: inline-block;
+}
+
+.plan-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: default;
+}
+
+.plan-card.completed-plan .plan-header {
+    cursor: pointer;
+}
+
+.check-icon {
+    color: var(--primary);
+    margin-left: 0.5rem;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.toggle-icon {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+}
+
+/* Existing styles below */
 
 .dash-form {
     display: flex;

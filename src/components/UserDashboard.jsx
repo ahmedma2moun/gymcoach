@@ -6,6 +6,7 @@ const UserDashboard = () => {
     const { user, logout } = useAuth();
     const [plans, setPlans] = useState([]);
     const [openVideoIndex, setOpenVideoIndex] = useState(null);
+    const [expandedPlans, setExpandedPlans] = useState({});
 
     useEffect(() => {
         if (user) {
@@ -47,6 +48,13 @@ const UserDashboard = () => {
         setOpenVideoIndex(openVideoIndex === id ? null : id);
     };
 
+    const toggleExpand = (planId) => {
+        setExpandedPlans(prev => ({
+            ...prev,
+            [planId]: !prev[planId]
+        }));
+    };
+
     return (
         <div className="dashboard">
             <header className="dash-header">
@@ -58,52 +66,72 @@ const UserDashboard = () => {
                 {plans.length === 0 ? (
                     <p>No training plans assigned yet.</p>
                 ) : (
-                    plans.map((plan, pIdx) => (
-                        <div key={plan.id} className="plan-card">
-                            <h3>{plan.title}</h3>
-                            <div className="exercise-list">
-                                {plan.exercises.map((ex, idx) => {
-                                    const itemKey = `${pIdx}-${idx}`;
-                                    const embedUrl = getEmbedUrl(ex.videoUrl);
+                    plans.map((plan, pIdx) => {
+                        const isCompleted = plan.exercises.length > 0 && plan.exercises.every(ex => ex.done);
+                        // If completed, default to collapsed unless explicitly expanded.
+                        // If not completed, always expanded (ignoring toggle for now, or we can make all collapsible).
+                        // Requirement: "if the plan's all trainings are check please make the plan collapsed"
+                        // Implementation: If completed AND not explicitly in expandedPlans state (true), render collapsed.
+                        // Ideally we initialize expandedPlans state, but since plans fetch async, we can do it on render.
 
-                                    return (
-                                        <div key={idx} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
-                                            <div className="exercise-item">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={ex.done}
-                                                    onChange={() => toggleExercise(plan.id, idx, ex.done)}
-                                                />
-                                                <div className="ex-details">
-                                                    <span className="ex-name">{ex.name}</span>
-                                                    <span className="ex-meta">{ex.sets} Sets x {ex.reps} Reps</span>
+                        // Let's invert: Logic -> Collapsed if Completed AND !Expanded.
+                        const isCollapsed = isCompleted && !expandedPlans[plan.id];
+
+                        return (
+                            <div key={plan.id} className={`plan-card ${isCompleted ? 'completed-plan' : ''}`}>
+                                <div className="plan-header" onClick={() => isCompleted && toggleExpand(plan.id)}>
+                                    <h3>{plan.title} {isCompleted && <span className="check-icon">✓</span>}</h3>
+                                    {isCompleted && (
+                                        <span className="toggle-icon">{isCollapsed ? '▼' : '▲'}</span>
+                                    )}
+                                </div>
+
+                                {!isCollapsed && (
+                                    <div className="exercise-list">
+                                        {plan.exercises.map((ex, idx) => {
+                                            const itemKey = `${pIdx}-${idx}`;
+                                            const embedUrl = getEmbedUrl(ex.videoUrl);
+
+                                            return (
+                                                <div key={idx} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
+                                                    <div className="exercise-item">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={ex.done}
+                                                            onChange={() => toggleExercise(plan.id, idx, ex.done)}
+                                                        />
+                                                        <div className="ex-details">
+                                                            <span className="ex-name">{ex.name}</span>
+                                                            <span className="ex-meta">{ex.sets} Sets x {ex.reps} Reps</span>
+                                                        </div>
+                                                        {embedUrl && (
+                                                            <button
+                                                                className="btn-video"
+                                                                onClick={() => toggleVideo(itemKey)}
+                                                            >
+                                                                {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    {openVideoIndex === itemKey && embedUrl && (
+                                                        <div className="video-container">
+                                                            <iframe
+                                                                src={embedUrl}
+                                                                title={ex.name}
+                                                                frameBorder="0"
+                                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                                allowFullScreen
+                                                            ></iframe>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                {embedUrl && (
-                                                    <button
-                                                        className="btn-video"
-                                                        onClick={() => toggleVideo(itemKey)}
-                                                    >
-                                                        {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
-                                                    </button>
-                                                )}
-                                            </div>
-                                            {openVideoIndex === itemKey && embedUrl && (
-                                                <div className="video-container">
-                                                    <iframe
-                                                        src={embedUrl}
-                                                        title={ex.name}
-                                                        frameBorder="0"
-                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                        allowFullScreen
-                                                    ></iframe>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
         </div>
