@@ -1,0 +1,86 @@
+.membership {
+    background-color: #0F0F0F;
+    /* Slightly lighter than main bg */
+}
+
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    align-items: center;
+    /* Align specifically for the highlighted card size */
+}
+
+.pricing-card {
+    background: var(--secondary);
+    padding: 3rem 2rem;
+    border-radius: 8px;
+    text-align: center;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: var(--transition);
+}
+
+.pricing-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary);
+}
+
+.pricing-card.highlighted {
+    border: 1px solid var(--primary);
+    padding: 4rem 2rem;
+    /* Larger than others */
+    background: linear-gradient(145deg, var(--secondary), #222);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+}
+
+.badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--primary);
+    color: var(--bg-dark);
+    padding: 0.25rem 1rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.pricing-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--text-light);
+}
+
+.price {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--primary);
+    margin-bottom: 2rem;
+}
+
+.price span {
+    font-size: 1rem;
+    color: var(--text-dim);
+    font-weight: 400;
+}
+
+.features {
+    margin-bottom: 2.5rem;
+    text-align: left;
+}
+
+.features li {
+    margin-bottom: 1rem;
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pricing-card .btn {
+    width: 100%;
+    display: block;
+}

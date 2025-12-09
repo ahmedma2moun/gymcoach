@@ -1,0 +1,172 @@
+.dashboard {
+    min-height: 100vh;
+    background-color: var(--bg-dark);
+    padding: 2rem;
+    color: var(--text-light);
+}
+
+.dash-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dash-header h1 {
+    color: var(--primary);
+    font-size: 2rem;
+}
+
+.dash-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+}
+
+.dash-card,
+.plan-card {
+    background: var(--secondary);
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 2rem;
+}
+
+.dash-card h2,
+.plan-card h3 {
+    margin-bottom: 1.5rem;
+    color: var(--primary);
+}
+
+.dash-form {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.dash-form input,
+.full-width {
+    width: 100%;
+    padding: 0.75rem;
+    background: #111;
+    border: 1px solid #333;
+    color: #fff;
+    border-radius: 4px;
+}
+
+.full-width {
+    display: block;
+}
+
+.mt-2 {
+    margin-top: 0.5rem;
+}
+
+.mt-4 {
+    margin-top: 1.5rem;
+}
+
+.user-item {
+    padding: 0.5rem;
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+}
+
+.ex-inputs {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 2fr auto;
+    /* Updated for Video URL */
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.btn-small {
+    background: var(--primary);
+    border: none;
+    font-weight: bold;
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+}
+
+.plan-preview li {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    padding: 0.25rem 0;
+}
+
+.exercise-wrapper {
+    background: #111;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    padding: 1rem;
+    transition: var(--transition);
+}
+
+.exercise-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.exercise-wrapper.done-wrapper .exercise-item .ex-name {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+
+.exercise-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--primary);
+}
+
+.ex-details {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.ex-name {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.ex-meta {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+}
+
+.btn-video {
+    background: transparent;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+}
+
+.btn-video:hover {
+    background: var(--primary);
+    color: var(--secondary);
+}
+
+.video-container {
+    margin-top: 1rem;
+    position: relative;
+    padding-bottom: 56.25%;
+    /* 16:9 */
+    height: 0;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+.video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
