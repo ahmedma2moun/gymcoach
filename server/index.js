@@ -71,7 +71,7 @@ app.post('/api/users', async (req, res) => {
 // --- Plans ---
 app.get('/api/plans/:userId', async (req, res) => {
     await connectDB();
-    const plans = await Plan.find({ userId: req.params.userId });
+    const plans = await Plan.find({ userId: req.params.userId }).sort({ date: -1 });
     res.json(plans);
 });
 

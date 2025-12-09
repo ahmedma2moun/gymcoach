@@ -172,13 +172,16 @@ const AdminDashboard = () => {
                         className="full-width mt-2"
                     />
 
-                    <input
-                        type="date"
-                        value={newPlan.date}
-                        min={new Date().toISOString().split('T')[0]} // Prevent past dates
-                        onChange={e => setNewPlan({ ...newPlan, date: e.target.value })}
-                        className="full-width mt-2"
-                    />
+                    <div className="input-group mt-2">
+                        <label className="input-label">Start Date:</label>
+                        <input
+                            type="date"
+                            value={newPlan.date}
+                            min={new Date().toISOString().split('T')[0]} // Prevent past dates
+                            onChange={e => setNewPlan({ ...newPlan, date: e.target.value })}
+                            className="full-width"
+                        />
+                    </div>
 
                     <div className="exercise-builder">
                         <h4>Add Exercises</h4>

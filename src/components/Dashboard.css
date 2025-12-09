@@ -60,19 +60,6 @@
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
-    padding-bottom: 0.5rem;
-}
-
-.check-icon {
-    color: var(--primary);
-    margin-left: 0.5rem;
-    text-decoration: none;
-    display: inline-block;
-}
-
-.toggle-icon {
-    color: var(--text-dim);
-    font-size: 0.8rem;
 }
 
 .dash-form {
