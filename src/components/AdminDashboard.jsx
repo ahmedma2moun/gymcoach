@@ -107,6 +107,14 @@ const AdminDashboard = () => {
     const closeProgressView = () => {
         setViewingUser(null);
         setUserPlans([]);
+        setExpandedPlans({});
+    };
+
+    const toggleExpand = (planId, currentCollapsedState) => {
+        setExpandedPlans(prev => ({
+            ...prev,
+            [planId]: currentCollapsedState // If was collapsed (true), set expanded (true). If passed expanded (false), set collapsed (false).
+        }));
     };
 
     return (
@@ -256,7 +264,7 @@ const AdminDashboard = () => {
 
                                     return (
                                         <div key={idx} className={`plan-card ${isCompleted ? 'completed-plan' : ''}`}>
-                                            <div className="plan-header" onClick={() => toggleExpand(plan.id)}>
+                                            <div className="plan-header" onClick={() => toggleExpand(plan.id, isCollapsed)}>
                                                 <h3>
                                                     {plan.title} {plan.date && <small>({new Date(plan.date).toLocaleDateString()})</small>}
                                                     {isCompleted && <span className="check-icon">✓</span>}
