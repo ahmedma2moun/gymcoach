@@ -14,7 +14,7 @@ const initDB = async () => {
     const users = await readData('users.json');
     if (users.length === 0) {
         // Create default admin
-        await writeData('users.json', [{ id: 1, username: 'admin', password: 'password', role: 'admin' }]);
+        await writeData('users.json', [{ id: 1, username: 'admin', password: 'admin', role: 'admin' }]);
         console.log('Default admin created');
     }
 };
