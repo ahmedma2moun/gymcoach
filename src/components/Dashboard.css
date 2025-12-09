@@ -215,6 +215,23 @@
     color: var(--secondary);
 }
 
+className="full-width"
+/>*/
+}
+
+/* Applies to all date inputs */
+input[type="date"] {
+    color-scheme: dark;
+    /* Forces browser default icons to be light */
+    cursor: pointer;
+}
+
+/* Fallback for webkit if color-scheme isn't sufficient */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}
+
 .video-container {
     margin-top: 1rem;
     position: relative;

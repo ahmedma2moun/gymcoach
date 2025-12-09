@@ -226,6 +226,7 @@ const AdminDashboard = () => {
                             value={newPlan.date}
                             min={new Date().toISOString().split('T')[0]} // Prevent past dates
                             onChange={e => setNewPlan({ ...newPlan, date: e.target.value })}
+                            onClick={(e) => e.target.showPicker()} /* Open picker on click anywhere in field */
                             className="full-width"
                         />
                     </div>
