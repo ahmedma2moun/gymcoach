@@ -100,51 +100,38 @@ const UserDashboard = () => {
                                                 <div key={idx} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
                                                     <div className="exercise-item">
                                                         <input
-                                                            type="checkbox"
-                                                            checked={ex.done}
-                                                            onChange={(e) => {
-                                                                e.stopPropagation(); // Prevent toggling collapse when clicking checkbox (though checkbox is separate, good practice if event bubbles)
-                                                                toggleExercise(plan.id, idx, ex.done);
-                                                            }}
-                                                        />
-                                                        <div className="ex-details">
-                                                            <span className="ex-name">{ex.name}</span>
-                                                            <span className="ex-meta">{ex.sets} Sets x {ex.reps} Reps</span>
-                                                        </div>
-                                                        {embedUrl && (
-                                                            <button
-                                                                className="btn-video"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    toggleVideo(itemKey);
+                                                            toggleVideo(itemKey);
                                                                 }}
                                                             >
-                                                                {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
-                                                            </button>
+                                                        {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
+                                                    </button>
                                                         )}
-                                                    </div>
-                                                    {openVideoIndex === itemKey && embedUrl && (
-                                                        <div className="video-container">
-                                                            <iframe
-                                                                src={embedUrl}
-                                                                title={ex.name}
-                                                                frameBorder="0"
-                                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                                allowFullScreen
-                                                            ></iframe>
-                                                        </div>
-                                                    )}
                                                 </div>
-                                            );
+                                                    {
+                                                openVideoIndex === itemKey && embedUrl && (
+                                                    <div className="video-container">
+                                                        <iframe
+                                                            src={embedUrl}
+                                                            title={ex.name}
+                                                            frameBorder="0"
+                                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                            allowFullScreen
+                                                        ></iframe>
+                                                    </div>
+                                                )
+                                            }
+                                                </div>
+                                );
                                         })}
-                                    </div>
-                                )}
                             </div>
-                        );
+                        )
+                    }
+                            </div>
+            );
                     })
                 )}
-            </div>
         </div>
+        </div >
     );
 };
 

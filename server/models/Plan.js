@@ -4,6 +4,7 @@ const planSchema = new mongoose.Schema({
     id: { type: Number, required: true, unique: true },
     userId: { type: Number, required: true }, // Using numeric ID to match User schema
     title: { type: String, required: true },
+    date: { type: Date }, // Optional or required based on preference, but good to have
     status: { type: String, default: 'active' },
     exercises: [{
         name: String,

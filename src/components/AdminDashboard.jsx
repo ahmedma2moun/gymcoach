@@ -7,7 +7,7 @@ const AdminDashboard = () => {
     const [users, setUsers] = useState([]);
     const [newUser, setNewUser] = useState({ username: '', password: '' });
     const [selectedUser, setSelectedUser] = useState(null);
-    const [newPlan, setNewPlan] = useState({ title: '', exercises: [] });
+    const [newPlan, setNewPlan] = useState({ title: '', date: '', exercises: [] });
     const [exerciseInput, setExerciseInput] = useState({ name: '', sets: '', reps: '', videoUrl: '' });
 
     // New state for viewing progress
@@ -63,13 +63,14 @@ const AdminDashboard = () => {
             body: JSON.stringify({
                 userId: selectedUser,
                 title: newPlan.title,
+                date: newPlan.date,
                 exercises: newPlan.exercises
             })
         });
 
         if (res.ok) {
             alert('Plan assigned!');
-            setNewPlan({ title: '', exercises: [] });
+            setNewPlan({ title: '', date: '', exercises: [] });
             setSelectedUser(null);
         }
     };
@@ -92,6 +93,7 @@ const AdminDashboard = () => {
 
         setNewPlan({
             title: `${plan.title} (Repeat)`,
+            date: '', // Force choosing a new date
             exercises: cleanExercises
         });
         setSelectedUser(viewingUser.id);
@@ -170,6 +172,14 @@ const AdminDashboard = () => {
                         className="full-width mt-2"
                     />
 
+                    <input
+                        type="date"
+                        value={newPlan.date}
+                        min={new Date().toISOString().split('T')[0]} // Prevent past dates
+                        onChange={e => setNewPlan({ ...newPlan, date: e.target.value })}
+                        className="full-width mt-2"
+                    />
+
                     <div className="exercise-builder">
                         <h4>Add Exercises</h4>
                         <div className="ex-inputs">
@@ -235,7 +245,7 @@ const AdminDashboard = () => {
                                     <div key={idx} className={`plan-card ${plan.exercises.every(e => e.done) ? 'completed-plan' : ''}`}>
                                         <div className="plan-header">
                                             <h3>
-                                                {plan.title}
+                                                {plan.title} {plan.date && <small>({new Date(plan.date).toLocaleDateString()})</small>}
                                                 {plan.exercises.every(e => e.done) && <span className="check-icon">✓</span>}
                                             </h3>
                                             <button

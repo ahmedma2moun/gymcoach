@@ -77,13 +77,14 @@ app.get('/api/plans/:userId', async (req, res) => {
 
 app.post('/api/plans', async (req, res) => {
     await connectDB();
-    const { userId, title, exercises } = req.body;
+    const { userId, title, exercises, date } = req.body;
 
     try {
         const newPlan = await Plan.create({
             id: Date.now(),
             userId,
             title,
+            date,
             status: 'active',
             exercises: exercises.map(ex => ({ ...ex, done: false }))
         });
