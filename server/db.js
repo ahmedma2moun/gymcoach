@@ -1,31 +1,22 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, 'data');
+dotenv.config();
 
-export const readData = async (filename) => {
+const connectDB = async () => {
     try {
-        const filePath = path.join(DATA_DIR, filename);
-        const data = await fs.readFile(filePath, 'utf-8');
-        return JSON.parse(data);
+
+
+        const uri = "mongodb+srv://ahmedfcisasu:MM5ty1Da2XTj9GJ7@cluster0.bdhlsff.mongodb.net/?appName=Cluster0";
+
+        if (!uri) throw new Error('MONGO_URI is not defined');
+
+        await mongoose.connect(uri);
+        console.log('MongoDB Connected');
     } catch (error) {
-        if (error.code === 'ENOENT') {
-            // Return empty array if file doesn't exist
-            await fs.writeFile(path.join(DATA_DIR, filename), '[]');
-            return [];
-        }
-        throw error;
+        console.error('MongoDB Connection Error:', error.message);
+        // Do not exit process in serverless environment
     }
 };
 
-export const writeData = async (filename, data) => {
-    try {
-        const filePath = path.join(DATA_DIR, filename);
-        await fs.writeFile(filePath, JSON.stringify(data, null, 2));
-    } catch (error) {
-        console.warn(`Failed to write to ${filename} (likely read-only FS):`, error.message);
-        // Do not throw, so the app continues functioning (in-memory data flow)
-    }
-};
+export default connectDB;
