@@ -15,14 +15,14 @@ const AdminDashboard = () => {
     }, []);
 
     const fetchUsers = async () => {
-        const res = await fetch('http://localhost:3000/api/users');
+        const res = await fetch('/api/users');
         const data = await res.json();
         setUsers(data);
     };
 
     const handleCreateUser = async (e) => {
         e.preventDefault();
-        const res = await fetch('http://localhost:3000/api/users', {
+        const res = await fetch('/api/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newUser)
@@ -46,7 +46,7 @@ const AdminDashboard = () => {
     const handleAssignPlan = async () => {
         if (!selectedUser || newPlan.exercises.length === 0) return;
 
-        const res = await fetch('http://localhost:3000/api/plans', {
+        const res = await fetch('/api/plans', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

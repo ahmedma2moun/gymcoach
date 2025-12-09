@@ -14,13 +14,13 @@ const UserDashboard = () => {
     }, [user]);
 
     const fetchPlans = async () => {
-        const res = await fetch(`http://localhost:3000/api/plans/${user.id}`);
+        const res = await fetch(`/api/plans/${user.id}`);
         const data = await res.json();
         setPlans(data);
     };
 
     const toggleExercise = async (planId, exerciseIndex, currentStatus) => {
-        const res = await fetch(`http://localhost:3000/api/plans/${planId}`, {
+        const res = await fetch(`/api/plans/${planId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ exerciseIndex, done: !currentStatus })

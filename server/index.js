@@ -27,7 +27,7 @@ app.post('/api/login', async (req, res) => {
     const user = users.find(u => u.username === username && u.password === password);
 
     if (user) {
-        const { password, ...userWithoutPass } = user;
+        const { password: _, ...userWithoutPass } = user;
         res.json(userWithoutPass);
     } else {
         res.status(401).json({ message: 'Invalid credentials' });
@@ -107,6 +107,14 @@ app.patch('/api/plans/:planId', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+// Export app for Vercel
+export default app;
+
+/* eslint-disable no-undef */
+// Only listen if run directly (not imported as a module)
+if (process.env.NODE_ENV !== 'production' || process.argv[1].endsWith('index.js')) {
+    app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+    });
+}
+/* eslint-enable no-undef */
