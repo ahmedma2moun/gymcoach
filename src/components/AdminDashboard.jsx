@@ -74,6 +74,26 @@ const AdminDashboard = () => {
         setUserPlans(data);
     };
 
+    const handleRepeatPlan = (plan) => {
+        // Pre-fill the form with this plan's data
+        const cleanExercises = plan.exercises.map(ex => ({
+            name: ex.name,
+            sets: ex.sets,
+            reps: ex.reps,
+            videoUrl: ex.videoUrl
+        }));
+
+        setNewPlan({
+            title: `${plan.title} (Repeat)`,
+            exercises: cleanExercises
+        });
+        setSelectedUser(viewingUser.id);
+
+        // Close modal and scroll to form implicitly (by layout)
+        setViewingUser(null);
+        setUserPlans([]);
+    };
+
     const closeProgressView = () => {
         setViewingUser(null);
         setUserPlans([]);
@@ -196,10 +216,19 @@ const AdminDashboard = () => {
                             ) : (
                                 userPlans.map((plan, idx) => (
                                     <div key={idx} className={`plan-card ${plan.exercises.every(e => e.done) ? 'completed-plan' : ''}`}>
-                                        <h3>
-                                            {plan.title}
-                                            {plan.exercises.every(e => e.done) && <span className="check-icon">✓</span>}
-                                        </h3>
+                                        <div className="plan-header">
+                                            <h3>
+                                                {plan.title}
+                                                {plan.exercises.every(e => e.done) && <span className="check-icon">✓</span>}
+                                            </h3>
+                                            <button
+                                                className="btn-small btn-repeat"
+                                                onClick={() => handleRepeatPlan(plan)}
+                                                title="Repeat this plan"
+                                            >
+                                                ↻ Repeat
+                                            </button>
+                                        </div>
                                         <div className="exercise-list">
                                             {plan.exercises.map((ex, i) => (
                                                 <div key={i} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>

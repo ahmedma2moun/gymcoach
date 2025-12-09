@@ -137,6 +137,17 @@
     padding: 0 0.5rem;
 }
 
+/* Repeat Button Style */
+.btn-repeat {
+    background: var(--primary);
+    color: var(--secondary);
+    font-size: 0.8rem;
+    width: auto;
+    padding: 0 0.75rem;
+    height: 25px;
+    margin-left: 1rem;
+}
+
 .plan-preview li {
     font-size: 0.9rem;
     color: var(--text-dim);
@@ -235,7 +246,10 @@
     max-height: 90vh;
     overflow-y: auto;
     background: var(--secondary);
-    /* Already has dash-card styles, but ensure bg */
+    border-radius: 8px;
+    /* Added */
+    padding: 2rem;
+    /* Added inner padding */
 }
 
 .modal-header {
