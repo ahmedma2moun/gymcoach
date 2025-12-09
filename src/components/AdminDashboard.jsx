@@ -10,6 +10,10 @@ const AdminDashboard = () => {
     const [newPlan, setNewPlan] = useState({ title: '', exercises: [] });
     const [exerciseInput, setExerciseInput] = useState({ name: '', sets: '', reps: '', videoUrl: '' });
 
+    // New state for viewing progress
+    const [viewingUser, setViewingUser] = useState(null);
+    const [userPlans, setUserPlans] = useState([]);
+
     useEffect(() => {
         fetchUsers();
     }, []);
@@ -63,6 +67,18 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleViewProgress = async (user) => {
+        setViewingUser(user);
+        const res = await fetch(`/api/plans/${user.id}`);
+        const data = await res.json();
+        setUserPlans(data);
+    };
+
+    const closeProgressView = () => {
+        setViewingUser(null);
+        setUserPlans([]);
+    };
+
     return (
         <div className="dashboard">
             <header className="dash-header">
@@ -92,7 +108,16 @@ const AdminDashboard = () => {
                     <ul className="user-list">
                         {users.map(u => (
                             <li key={u.id} className="user-item">
-                                {u.username} <small>({u.role})</small>
+                                <span>{u.username} <small>({u.role})</small></span>
+                                {u.role !== 'admin' && (
+                                    <button
+                                        className="btn-small btn-view"
+                                        onClick={() => handleViewProgress(u)}
+                                        title="View Progress"
+                                    >
+                                        👁️
+                                    </button>
+                                )}
                             </li>
                         ))}
                     </ul>
@@ -156,6 +181,45 @@ const AdminDashboard = () => {
                     </button>
                 </div>
             </div>
+
+            {/* Progress Modal / Overlay */}
+            {viewingUser && (
+                <div className="modal-overlay">
+                    <div className="modal-content dash-card">
+                        <div className="modal-header">
+                            <h2>Progress: {viewingUser.username}</h2>
+                            <button onClick={closeProgressView} className="btn-close">X</button>
+                        </div>
+                        <div className="user-plans-list">
+                            {userPlans.length === 0 ? (
+                                <p>No plans assigned.</p>
+                            ) : (
+                                userPlans.map((plan, idx) => (
+                                    <div key={idx} className={`plan-card ${plan.exercises.every(e => e.done) ? 'completed-plan' : ''}`}>
+                                        <h3>
+                                            {plan.title}
+                                            {plan.exercises.every(e => e.done) && <span className="check-icon">✓</span>}
+                                        </h3>
+                                        <div className="exercise-list">
+                                            {plan.exercises.map((ex, i) => (
+                                                <div key={i} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
+                                                    <div className="exercise-item">
+                                                        <input type="checkbox" checked={ex.done} readOnly />
+                                                        <div className="ex-details">
+                                                            <span className="ex-name">{ex.name}</span>
+                                                            <span className="ex-meta">{ex.sets} Sets x {ex.reps} Reps</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
