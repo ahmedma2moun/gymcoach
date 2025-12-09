@@ -13,6 +13,7 @@ const AdminDashboard = () => {
     // New state for viewing progress
     const [viewingUser, setViewingUser] = useState(null);
     const [userPlans, setUserPlans] = useState([]);
+    const [expandedPlans, setExpandedPlans] = useState({});
 
     useEffect(() => {
         fetchUsers();
@@ -244,36 +245,54 @@ const AdminDashboard = () => {
                             {userPlans.length === 0 ? (
                                 <p>No plans assigned.</p>
                             ) : (
-                                userPlans.map((plan, idx) => (
-                                    <div key={idx} className={`plan-card ${plan.exercises.every(e => e.done) ? 'completed-plan' : ''}`}>
-                                        <div className="plan-header">
-                                            <h3>
-                                                {plan.title} {plan.date && <small>({new Date(plan.date).toLocaleDateString()})</small>}
-                                                {plan.exercises.every(e => e.done) && <span className="check-icon">✓</span>}
-                                            </h3>
-                                            <button
-                                                className="btn-small btn-repeat"
-                                                onClick={() => handleRepeatPlan(plan)}
-                                                title="Repeat this plan"
-                                            >
-                                                ↻ Repeat
-                                            </button>
-                                        </div>
-                                        <div className="exercise-list">
-                                            {plan.exercises.map((ex, i) => (
-                                                <div key={i} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
-                                                    <div className="exercise-item">
-                                                        <input type="checkbox" checked={ex.done} readOnly />
-                                                        <div className="ex-details">
-                                                            <span className="ex-name">{ex.name}</span>
-                                                            <span className="ex-meta">{ex.sets} Sets x {ex.reps} Reps</span>
-                                                        </div>
-                                                    </div>
+                                userPlans.map((plan, idx) => {
+                                    const isCompleted = plan.exercises.every(e => e.done);
+                                    let isCollapsed;
+                                    if (expandedPlans[plan.id] === undefined) {
+                                        isCollapsed = isCompleted;
+                                    } else {
+                                        isCollapsed = !expandedPlans[plan.id];
+                                    }
+
+                                    return (
+                                        <div key={idx} className={`plan-card ${isCompleted ? 'completed-plan' : ''}`}>
+                                            <div className="plan-header" onClick={() => toggleExpand(plan.id)}>
+                                                <h3>
+                                                    {plan.title} {plan.date && <small>({new Date(plan.date).toLocaleDateString()})</small>}
+                                                    {isCompleted && <span className="check-icon">✓</span>}
+                                                </h3>
+                                                <div className="header-actions">
+                                                    <button
+                                                        className="btn-small btn-repeat"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRepeatPlan(plan);
+                                                        }}
+                                                        title="Repeat this plan"
+                                                    >
+                                                        ↻ Repeat
+                                                    </button>
+                                                    <span className="toggle-icon">{isCollapsed ? '▼' : '▲'}</span>
                                                 </div>
-                                            ))}
+                                            </div>
+                                            {!isCollapsed && (
+                                                <div className="exercise-list">
+                                                    {plan.exercises.map((ex, i) => (
+                                                        <div key={i} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
+                                                            <div className="exercise-item">
+                                                                <input type="checkbox" checked={ex.done} readOnly />
+                                                                <div className="ex-details">
+                                                                    <span className="ex-name">{ex.name}</span>
+                                                                    <span className="ex-meta">{ex.sets} Sets x {ex.reps} Reps</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             )}
                         </div>
                     </div>

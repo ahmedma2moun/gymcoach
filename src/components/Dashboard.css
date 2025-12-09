@@ -272,3 +272,9 @@
     font-size: 1.5rem;
     cursor: pointer;
 }
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
