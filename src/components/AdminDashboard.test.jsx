@@ -24,6 +24,7 @@ global.fetch = vi.fn();
 describe('AdminDashboard', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        global.confirm = vi.fn(() => true); // Auto-confirm deletions
     });
 
     it('renders admin dashboard and fetches users', async () => {

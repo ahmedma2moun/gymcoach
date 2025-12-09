@@ -117,6 +117,35 @@ const AdminDashboard = () => {
         }));
     };
 
+    const handleToggleStatus = async (user) => {
+        const newStatus = !user.isActive;
+        const res = await fetch(`/api/users/${user.id}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isActive: newStatus })
+        });
+        if (res.ok) {
+            // Update local state
+            setUsers(users.map(u => u.id === user.id ? { ...u, isActive: newStatus } : u));
+        } else {
+            alert('Error updating user status');
+        }
+    };
+
+    const handleDeletePlan = async (planId) => {
+        if (!confirm('Are you sure you want to delete this plan?')) return;
+
+        const res = await fetch(`/api/plans/${planId}`, {
+            method: 'DELETE'
+        });
+
+        if (res.ok) {
+            setUserPlans(userPlans.filter(p => p.id !== planId));
+        } else {
+            alert('Error deleting plan');
+        }
+    };
+
     return (
         <div className="dashboard">
             <header className="dash-header">
@@ -148,13 +177,22 @@ const AdminDashboard = () => {
                             <li key={u.id} className="user-item">
                                 <span>{u.username} <small>({u.role})</small></span>
                                 {u.role !== 'admin' && (
-                                    <button
-                                        className="btn-small btn-view"
-                                        onClick={() => handleViewProgress(u)}
-                                        title="View Progress"
-                                    >
-                                        👁️
-                                    </button>
+                                    <div className="user-actions">
+                                        <button
+                                            className={`btn-small ${u.isActive !== false ? 'btn-deactivate' : 'btn-activate'}`} // Default to active if undefined
+                                            onClick={() => handleToggleStatus(u)}
+                                            title={u.isActive !== false ? 'Deactivate User' : 'Activate User'}
+                                        >
+                                            {u.isActive !== false ? '🚫' : '✅'}
+                                        </button>
+                                        <button
+                                            className="btn-small btn-view"
+                                            onClick={() => handleViewProgress(u)}
+                                            title="View Progress"
+                                        >
+                                            👁️
+                                        </button>
+                                    </div>
                                 )}
                             </li>
                         ))}
@@ -169,7 +207,7 @@ const AdminDashboard = () => {
                         className="full-width"
                     >
                         <option value="">Select User</option>
-                        {users.filter(u => u.role !== 'admin').map(u => (
+                        {users.filter(u => u.role !== 'admin' && u.isActive !== false).map(u => (
                             <option key={u.id} value={u.id}>{u.username}</option>
                         ))}
                     </select>
@@ -279,6 +317,16 @@ const AdminDashboard = () => {
                                                         title="Repeat this plan"
                                                     >
                                                         ↻ Repeat
+                                                    </button>
+                                                    <button
+                                                        className="btn-small btn-delete-plan"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeletePlan(plan.id);
+                                                        }}
+                                                        title="Delete Plan"
+                                                    >
+                                                        🗑️
                                                     </button>
                                                     <span className="toggle-icon">{isCollapsed ? '▼' : '▲'}</span>
                                                 </div>

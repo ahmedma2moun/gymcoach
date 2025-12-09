@@ -28,6 +28,9 @@ app.post('/api/login', async (req, res) => {
             password
         });
         if (user) {
+            if (user.isActive === false) {
+                return res.status(403).json({ message: 'Account is deactivated' });
+            }
             const { password: _, ...userWithoutPass } = user.toObject();
             res.json(userWithoutPass);
         } else {
@@ -59,12 +62,30 @@ app.post('/api/users', async (req, res) => {
             id: Date.now(), // Keeping numeric ID logic for now
             username,
             password,
-            role
+            role,
+            isActive: true
         });
 
-        res.json({ id: newUser.id, username: newUser.username, role: newUser.role });
+        res.json({ id: newUser.id, username: newUser.username, role: newUser.role, isActive: newUser.isActive });
     } catch (e) {
         res.status(500).json({ message: 'Error creating user' });
+    }
+});
+
+app.patch('/api/users/:id/status', async (req, res) => {
+    await connectDB();
+    const { isActive } = req.body;
+    try {
+        const user = await User.findOneAndUpdate(
+            { id: req.params.id },
+            { isActive },
+            { new: true }
+        ).select('-password');
+
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        res.json(user);
+    } catch (e) {
+        res.status(500).json({ message: 'Error updating user status' });
     }
 });
 
@@ -91,6 +112,19 @@ app.post('/api/plans', async (req, res) => {
         res.json(newPlan);
     } catch (e) {
         res.status(500).json({ message: 'Error creating plan' });
+    }
+});
+
+app.delete('/api/plans/:planId', async (req, res) => {
+    await connectDB();
+    try {
+        const result = await Plan.deleteOne({ id: req.params.planId });
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ message: 'Plan not found' });
+        }
+        res.json({ message: 'Plan deleted' });
+    } catch (e) {
+        res.status(500).json({ message: 'Error deleting plan' });
     }
 });
 
@@ -126,7 +160,7 @@ const ensureAdmin = async () => {
     await connectDB();
     const admin = await User.findOne({ username: 'admin' });
     if (!admin) {
-        await User.create({ id: 1, username: 'admin', password: 'admin', role: 'admin' });
+        await User.create({ id: 1, username: 'admin', password: 'admin', role: 'admin', isActive: true });
         console.log('Default admin created (Mongo)');
     }
 };

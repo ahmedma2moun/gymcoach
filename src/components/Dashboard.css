@@ -278,3 +278,35 @@
     align-items: center;
     gap: 1rem;
 }
+
+.user-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-deactivate {
+    background: #444;
+}
+
+.btn-deactivate:hover {
+    background: #cc0000;
+}
+
+.btn-activate {
+    background: #00cc00;
+}
+
+.btn-delete-plan {
+    background: #ff4444;
+    color: white;
+    width: 25px;
+    height: 25px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-delete-plan:hover {
+    background: #990000;
+}
