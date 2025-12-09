@@ -68,22 +68,26 @@ const UserDashboard = () => {
                 ) : (
                     plans.map((plan, pIdx) => {
                         const isCompleted = plan.exercises.length > 0 && plan.exercises.every(ex => ex.done);
-                        // If completed, default to collapsed unless explicitly expanded.
-                        // If not completed, always expanded (ignoring toggle for now, or we can make all collapsible).
-                        // Requirement: "if the plan's all trainings are check please make the plan collapsed"
-                        // Implementation: If completed AND not explicitly in expandedPlans state (true), render collapsed.
-                        // Ideally we initialize expandedPlans state, but since plans fetch async, we can do it on render.
+                        // If not explicitly toggled:
+                        // - Completed: Collapsed
+                        // - Not Completed: Expanded
+                        // If explicitly toggled (expandedPlans[id] exists), respect that.
 
-                        // Let's invert: Logic -> Collapsed if Completed AND !Expanded.
-                        const isCollapsed = isCompleted && !expandedPlans[plan.id];
+                        let isCollapsed;
+                        if (expandedPlans[plan.id] === undefined) {
+                            // Default state behavior
+                            isCollapsed = isCompleted;
+                        } else {
+                            // Explicit user toggle behavior (inverted logic because true means expanded)
+                            isCollapsed = !expandedPlans[plan.id];
+                        }
 
+                        // Allow expansion toggle for ALL plans now
                         return (
                             <div key={plan.id} className={`plan-card ${isCompleted ? 'completed-plan' : ''}`}>
-                                <div className="plan-header" onClick={() => isCompleted && toggleExpand(plan.id)}>
+                                <div className="plan-header" onClick={() => toggleExpand(plan.id)}>
                                     <h3>{plan.title} {isCompleted && <span className="check-icon">✓</span>}</h3>
-                                    {isCompleted && (
-                                        <span className="toggle-icon">{isCollapsed ? '▼' : '▲'}</span>
-                                    )}
+                                    <span className="toggle-icon">{isCollapsed ? '▼' : '▲'}</span>
                                 </div>
 
                                 {!isCollapsed && (
@@ -98,7 +102,10 @@ const UserDashboard = () => {
                                                         <input
                                                             type="checkbox"
                                                             checked={ex.done}
-                                                            onChange={() => toggleExercise(plan.id, idx, ex.done)}
+                                                            onChange={(e) => {
+                                                                e.stopPropagation(); // Prevent toggling collapse when clicking checkbox (though checkbox is separate, good practice if event bubbles)
+                                                                toggleExercise(plan.id, idx, ex.done);
+                                                            }}
                                                         />
                                                         <div className="ex-details">
                                                             <span className="ex-name">{ex.name}</span>
@@ -107,7 +114,10 @@ const UserDashboard = () => {
                                                         {embedUrl && (
                                                             <button
                                                                 className="btn-video"
-                                                                onClick={() => toggleVideo(itemKey)}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    toggleVideo(itemKey);
+                                                                }}
                                                             >
                                                                 {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
                                                             </button>
