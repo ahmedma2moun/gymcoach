@@ -152,6 +152,25 @@
     font-size: 0.9rem;
     color: var(--text-dim);
     padding: 0.25rem 0;
+    /* Added flex layout for delete button alignment */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Delete Draft Exercise Button */
+.btn-delete-ex {
+    background: transparent;
+    border: none;
+    color: #ff4444;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0 0.5rem;
+}
+
+.btn-delete-ex:hover {
+    color: #ff0000;
 }
 
 .exercise-wrapper {

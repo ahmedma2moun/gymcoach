@@ -47,6 +47,13 @@ const AdminDashboard = () => {
         setExerciseInput({ name: '', sets: '', reps: '', videoUrl: '' });
     };
 
+    const removeExerciseFromPlan = (indexToRemove) => {
+        setNewPlan({
+            ...newPlan,
+            exercises: newPlan.exercises.filter((_, index) => index !== indexToRemove)
+        });
+    };
+
     const handleAssignPlan = async () => {
         if (!selectedUser || newPlan.exercises.length === 0) return;
 
@@ -191,7 +198,17 @@ const AdminDashboard = () => {
 
                         <ul className="plan-preview">
                             {newPlan.exercises.map((ex, i) => (
-                                <li key={i}>{ex.name} - {ex.sets}x{ex.reps} {ex.videoUrl && '📹'}</li>
+                                <li key={i} className="preview-item">
+                                    <span>{ex.name} - {ex.sets}x{ex.reps} {ex.videoUrl && '📹'}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeExerciseFromPlan(i)}
+                                        className="btn-delete-ex"
+                                        title="Remove exercise"
+                                    >
+                                        ✕
+                                    </button>
+                                </li>
                             ))}
                         </ul>
                     </div>
