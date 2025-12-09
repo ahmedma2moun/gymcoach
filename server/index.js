@@ -22,7 +22,11 @@ app.post('/api/login', async (req, res) => {
     await connectDB();
     const { username, password } = req.body;
     try {
-        const user = await User.findOne({ username, password });
+        // Case-insensitive search for username
+        const user = await User.findOne({
+            username: { $regex: new RegExp(`^${username}$`, 'i') },
+            password
+        });
         if (user) {
             const { password: _, ...userWithoutPass } = user.toObject();
             res.json(userWithoutPass);
