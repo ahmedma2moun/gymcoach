@@ -28,7 +28,8 @@ const Login = () => {
                     navigate('/dashboard');
                 }
             } else {
-                setError('Invalid credentials');
+                const data = await response.json();
+                setError(data.message || 'Invalid credentials');
             }
         } catch (err) {
             setError('Connection error');
