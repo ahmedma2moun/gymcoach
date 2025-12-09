@@ -68,25 +68,21 @@ const UserDashboard = () => {
                 ) : (
                     plans.map((plan, pIdx) => {
                         const isCompleted = plan.exercises.length > 0 && plan.exercises.every(ex => ex.done);
-                        // If not explicitly toggled:
-                        // - Completed: Collapsed
-                        // - Not Completed: Expanded
-                        // If explicitly toggled (expandedPlans[id] exists), respect that.
 
                         let isCollapsed;
                         if (expandedPlans[plan.id] === undefined) {
-                            // Default state behavior
                             isCollapsed = isCompleted;
                         } else {
-                            // Explicit user toggle behavior (inverted logic because true means expanded)
                             isCollapsed = !expandedPlans[plan.id];
                         }
 
-                        // Allow expansion toggle for ALL plans now
                         return (
                             <div key={plan.id} className={`plan-card ${isCompleted ? 'completed-plan' : ''}`}>
                                 <div className="plan-header" onClick={() => toggleExpand(plan.id)}>
-                                    <h3>{plan.title} {isCompleted && <span className="check-icon">✓</span>}</h3>
+                                    <h3>
+                                        {plan.title} {plan.date && <span className="plan-date">({new Date(plan.date).toLocaleDateString()})</span>}
+                                        {isCompleted && <span className="check-icon">✓</span>}
+                                    </h3>
                                     <span className="toggle-icon">{isCollapsed ? '▼' : '▲'}</span>
                                 </div>
 
@@ -100,38 +96,51 @@ const UserDashboard = () => {
                                                 <div key={idx} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
                                                     <div className="exercise-item">
                                                         <input
-                                                            toggleVideo(itemKey);
+                                                            type="checkbox"
+                                                            checked={ex.done}
+                                                            onChange={(e) => {
+                                                                e.stopPropagation();
+                                                                toggleExercise(plan.id, idx, ex.done);
+                                                            }}
+                                                        />
+                                                        <div className="ex-details">
+                                                            <span className="ex-name">{ex.name}</span>
+                                                            <span className="ex-meta">{ex.sets} Sets x {ex.reps} Reps</span>
+                                                        </div>
+                                                        {embedUrl && (
+                                                            <button
+                                                                className="btn-video"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    toggleVideo(itemKey);
                                                                 }}
                                                             >
-                                                        {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
-                                                    </button>
+                                                                {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
+                                                            </button>
                                                         )}
-                                                </div>
-                                                    {
-                                                openVideoIndex === itemKey && embedUrl && (
-                                                    <div className="video-container">
-                                                        <iframe
-                                                            src={embedUrl}
-                                                            title={ex.name}
-                                                            frameBorder="0"
-                                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                            allowFullScreen
-                                                        ></iframe>
                                                     </div>
-                                                )
-                                            }
+                                                    {openVideoIndex === itemKey && embedUrl && (
+                                                        <div className="video-container">
+                                                            <iframe
+                                                                src={embedUrl}
+                                                                title={ex.name}
+                                                                frameBorder="0"
+                                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                                allowFullScreen
+                                                            ></iframe>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                );
+                                            );
                                         })}
+                                    </div>
+                                )}
                             </div>
-                        )
-                    }
-                            </div>
-            );
+                        );
                     })
                 )}
+            </div>
         </div>
-        </div >
     );
 };
 
