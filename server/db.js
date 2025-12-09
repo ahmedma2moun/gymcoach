@@ -21,6 +21,11 @@ export const readData = async (filename) => {
 };
 
 export const writeData = async (filename, data) => {
-    const filePath = path.join(DATA_DIR, filename);
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+    try {
+        const filePath = path.join(DATA_DIR, filename);
+        await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+    } catch (error) {
+        console.warn(`Failed to write to ${filename} (likely read-only FS):`, error.message);
+        // Do not throw, so the app continues functioning (in-memory data flow)
+    }
 };
