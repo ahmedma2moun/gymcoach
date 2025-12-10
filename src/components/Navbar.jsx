@@ -26,7 +26,7 @@ const Navbar = () => {
                     <li><a href="#programs" onClick={() => setIsOpen(false)}>Programs</a></li>
                     <li><a href="#membership" onClick={() => setIsOpen(false)}>Membership</a></li>
                     <li><a href="#about" onClick={() => setIsOpen(false)}>About</a></li>
-                    <li><a href="#join" className="btn btn-primary" onClick={() => setIsOpen(false)}>Join Now</a></li>
+                    <li><a href="#join" className="btn btn-primary btn-glow" onClick={() => setIsOpen(false)}>Join Now</a></li>
                 </ul>
             </div>
         </nav>

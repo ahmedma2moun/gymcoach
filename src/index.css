@@ -1,13 +1,33 @@
 :root {
-  --primary: #FFD700; /* Gold */
-  --primary-hover: #E5C100;
-  --secondary: #1A1A1A; /* Dark Gray */
-  --bg-dark: #0A0A0A; /* Almost Black */
-  --text-light: #F5F5F5;
-  --text-dim: #A3A3A3;
-  --accent: #00E5FF; /* Cyan/Neon */
-  --font-main: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
-  --transition: all 0.3s ease;
+  /* Premium Dark Palette */
+  --bg-dark: #0f172a;
+  /* Slate 900 */
+  --bg-card: #1e293b;
+  /* Slate 800 */
+  --bg-card-hover: #334155;
+  /* Slate 700 */
+
+  --primary: #818cf8;
+  /* Indigo 400 */
+  --primary-hover: #6366f1;
+  /* Indigo 500 */
+  --accent: #38bdf8;
+  /* Sky 400 - Neon accent */
+  --accent-glow: rgba(56, 189, 248, 0.3);
+
+  --text-main: #f8fafc;
+  /* Slate 50 */
+  --text-muted: #94a3b8;
+  /* Slate 400 */
+
+  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --radius: 12px;
+  --radius-sm: 8px;
+
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  --glass-bg: rgba(30, 41, 59, 0.7);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 * {
@@ -19,10 +39,10 @@
 body {
   font-family: var(--font-main);
   background-color: var(--bg-dark);
-  color: var(--text-light);
+  color: var(--text-main);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  min-height: 100vh;
 }
 
 a {
@@ -49,33 +69,61 @@ button {
   padding: 0 2rem;
 }
 
+/* Glassmorphism */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: var(--glass-border);
+}
+
+/* Typography Utilities */
+.text-gradient {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Buttons */
 .btn {
   padding: 0.75rem 1.5rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .btn-primary {
-  background-color: var(--primary);
-  color: var(--secondary);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
 }
 
 .btn-primary:hover {
-  background-color: var(--primary-hover);
   transform: translateY(-2px);
+  box-shadow: 0 6px 12px -1px rgba(99, 102, 241, 0.4);
 }
 
 .btn-outline {
-  background-color: transparent;
+  background: transparent;
   border: 1px solid var(--primary);
   color: var(--primary);
 }
 
 .btn-outline:hover {
-  background-color: var(--primary);
-  color: var(--secondary);
+  background: rgba(129, 140, 248, 0.1);
+  color: var(--text-main);
+  border-color: var(--primary-hover);
+}
+
+.btn-glow {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
 }
 
 /* Section Common */
@@ -85,16 +133,52 @@ section {
 
 .section-title {
   font-size: 2.5rem;
-  font-weight: 700;
+  font-weight: 800;
   text-align: center;
   margin-bottom: 3rem;
-  color: var(--primary);
-  text-transform: uppercase;
-  letter-spacing: 2px;
+  color: var(--text-main);
+  position: relative;
+  display: inline-block;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.section-title::after {
+  content: '';
+  display: block;
+  width: 60%;
+  height: 4px;
+  background: var(--primary);
+  margin: 0.5rem auto 0;
+  border-radius: 2px;
 }
 
 @media (max-width: 768px) {
   .section-title {
     font-size: 2rem;
   }
+}
+
+/* Form Elements */
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  background: rgba(30, 41, 59, 0.5);
+  /* Semi-transparent slate */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-family: inherit;
+  transition: var(--transition);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.2);
+  background: rgba(30, 41, 59, 0.8);
 }
