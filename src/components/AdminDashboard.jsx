@@ -21,6 +21,10 @@ const AdminDashboard = () => {
     const [userPlans, setUserPlans] = useState([]);
     const [expandedPlans, setExpandedPlans] = useState({});
 
+    // Calendar State
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState(null);
+
     useEffect(() => {
         fetchUsers();
         fetchExercises();
@@ -131,6 +135,8 @@ const AdminDashboard = () => {
         setViewingUser(null);
         setUserPlans([]);
         setExpandedPlans({});
+        setCurrentDate(new Date());
+        setSelectedDate(null);
     };
 
     const toggleExpand = (planId, currentCollapsedState) => {
@@ -164,9 +170,96 @@ const AdminDashboard = () => {
 
         if (res.ok) {
             setUserPlans(userPlans.filter(p => p.id !== planId));
+            // Also close details if open for this plan
+            if (activeTab === 'users' && selectedDate) {
+                // Force refresh or just let the filtering handle it
+            }
         } else {
             alert('Error deleting plan');
         }
+    };
+
+    // Calendar Helper Functions
+    const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+    const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
+
+    const handlePrevMonth = () => {
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    };
+
+    const handleNextMonth = () => {
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    };
+
+    const handleDayClick = (day) => {
+        const dateStr = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
+        // Find plans for this date
+        const plansForDay = userPlans.filter(p => new Date(p.date).toDateString() === dateStr);
+        if (plansForDay.length > 0) {
+            setSelectedDate(dateStr);
+        }
+    };
+
+    const renderCalendar = () => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const daysInMonth = getDaysInMonth(year, month);
+        const firstDay = getFirstDayOfMonth(year, month);
+
+        const days = [];
+        // Empty cells for days before the first day of the month
+        for (let i = 0; i < firstDay; i++) {
+            days.push(<div key={`empty-${i}`} className="calendar-day empty"></div>);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateObj = new Date(year, month, day);
+            const dateStr = dateObj.toDateString();
+            const dayPlans = userPlans.filter(p => {
+                // Fix timezone issue by comparing valid date strings or using local date parts if stored as YYYY-MM-DD
+                // Assumes p.date is ISO string. compare by local date string for simplicity in this context
+                return new Date(p.date).toDateString() === dateStr;
+            });
+
+            const hasPlan = dayPlans.length > 0;
+
+            days.push(
+                <div
+                    key={day}
+                    className={`calendar-day ${hasPlan ? 'has-plan' : ''}`}
+                    onClick={() => hasPlan && handleDayClick(day)}
+                >
+                    <span className="day-number">{day}</span>
+                    {hasPlan && (
+                        dayPlans.map((p, i) => (
+                            <div key={i} className="plan-indicator" title={p.title}>
+                                {p.title}
+                            </div>
+                        ))
+                    )}
+                </div>
+            );
+        }
+
+        return (
+            <div className="calendar-view">
+                <div className="calendar-controls">
+                    <button onClick={handlePrevMonth} className="btn-small">&lt;</button>
+                    <h3>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
+                    <button onClick={handleNextMonth} className="btn-small">&gt;</button>
+                </div>
+                <div className="calendar-grid">
+                    <div className="calendar-day-header">Sun</div>
+                    <div className="calendar-day-header">Mon</div>
+                    <div className="calendar-day-header">Tue</div>
+                    <div className="calendar-day-header">Wed</div>
+                    <div className="calendar-day-header">Thu</div>
+                    <div className="calendar-day-header">Fri</div>
+                    <div className="calendar-day-header">Sat</div>
+                    {days}
+                </div>
+            </div>
+        );
     };
 
     // Exercise Library Functions
@@ -451,77 +544,81 @@ const AdminDashboard = () => {
                 <div className="modal-overlay">
                     <div className="modal-content dash-card">
                         <div className="modal-header">
-                            <h2>Progress: {viewingUser.username}</h2>
+                            <h2>Progress: {viewingUser.username} {selectedDate && `- ${selectedDate}`}</h2>
                             <button onClick={closeProgressView} className="btn-close">X</button>
                         </div>
-                        <div className="user-plans-list">
-                            {userPlans.length === 0 ? (
-                                <p>No plans assigned.</p>
-                            ) : (
-                                userPlans.map((plan, idx) => {
-                                    const isCompleted = plan.exercises.every(e => e.done);
-                                    let isCollapsed;
-                                    if (expandedPlans[plan.id] === undefined) {
-                                        isCollapsed = isCompleted;
-                                    } else {
-                                        isCollapsed = !expandedPlans[plan.id];
-                                    }
 
-                                    return (
-                                        <div key={idx} className={`plan-card ${isCompleted ? 'completed-plan' : ''}`}>
-                                            <div className="plan-header" onClick={() => toggleExpand(plan.id, isCollapsed)}>
-                                                <h3>
-                                                    {plan.title} {plan.date && <small>({new Date(plan.date).toLocaleDateString()})</small>}
-                                                    {isCompleted && <span className="check-icon">✓</span>}
-                                                </h3>
-                                                <div className="header-actions">
-                                                    <button
-                                                        className="btn-small btn-repeat"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleRepeatPlan(plan);
-                                                        }}
-                                                        title="Repeat this plan"
-                                                    >
-                                                        ↻ Repeat
-                                                    </button>
-                                                    <button
-                                                        className="btn-small btn-delete-plan"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDeletePlan(plan.id);
-                                                        }}
-                                                        title="Delete Plan"
-                                                    >
-                                                        🗑️
-                                                    </button>
-                                                    <span className="toggle-icon">{isCollapsed ? '▼' : '▲'}</span>
-                                                </div>
-                                            </div>
-                                            {!isCollapsed && (
-                                                <div className="exercise-list">
-                                                    {plan.exercises.map((ex, i) => (
-                                                        <div key={i} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
-                                                            <div className="exercise-item">
-                                                                <input type="checkbox" checked={ex.done} readOnly />
-                                                                <div className="ex-details">
-                                                                    <span className="ex-name">{ex.name}</span>
-                                                                    <span className="ex-meta">
-                                                                        {ex.sets} Sets x {ex.reps} Reps
-                                                                        {ex.weight && ` @ ${ex.weight}`}
-                                                                        {ex.done && !ex.weight && ' (No weight logged)'}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
+                        {!selectedDate ? (
+                            renderCalendar()
+                        ) : (
+                            <div>
+                                <button onClick={() => setSelectedDate(null)} className="btn btn-outline mb-4">&larr; Back to Calendar</button>
+                                <div className="user-plans-list">
+                                    {userPlans.filter(p => new Date(p.date).toDateString() === selectedDate).length === 0 ? (
+                                        <p>No plans for this date.</p>
+                                    ) : (
+                                        userPlans.filter(p => new Date(p.date).toDateString() === selectedDate).map((plan, idx) => {
+                                            const isCompleted = plan.exercises.every(e => e.done);
+                                            // Always expand in detail view for simplicity, or manage state
+                                            const isCollapsed = expandedPlans[plan.id] === undefined ? false : !expandedPlans[plan.id];
+
+                                            return (
+                                                <div key={idx} className={`plan-card ${isCompleted ? 'completed-plan' : ''}`}>
+                                                    <div className="plan-header" onClick={() => toggleExpand(plan.id, isCollapsed)}>
+                                                        <h3>
+                                                            {plan.title}
+                                                            {isCompleted && <span className="check-icon">✓</span>}
+                                                        </h3>
+                                                        <div className="header-actions">
+                                                            <button
+                                                                className="btn-small btn-repeat"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleRepeatPlan(plan);
+                                                                }}
+                                                                title="Repeat this plan"
+                                                            >
+                                                                ↻ Repeat
+                                                            </button>
+                                                            <button
+                                                                className="btn-small btn-delete-plan"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeletePlan(plan.id);
+                                                                }}
+                                                                title="Delete Plan"
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                            <span className="toggle-icon">{isCollapsed ? '▼' : '▲'}</span>
                                                         </div>
-                                                    ))}
+                                                    </div>
+                                                    {!isCollapsed && (
+                                                        <div className="exercise-list">
+                                                            {plan.exercises.map((ex, i) => (
+                                                                <div key={i} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
+                                                                    <div className="exercise-item">
+                                                                        <input type="checkbox" checked={ex.done} readOnly />
+                                                                        <div className="ex-details">
+                                                                            <span className="ex-name">{ex.name}</span>
+                                                                            <span className="ex-meta">
+                                                                                {ex.sets} Sets x {ex.reps} Reps
+                                                                                {ex.weight && ` @ ${ex.weight}`}
+                                                                                {ex.done && !ex.weight && ' (No weight logged)'}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
