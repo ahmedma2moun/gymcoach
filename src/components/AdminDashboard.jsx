@@ -258,9 +258,15 @@ const AdminDashboard = () => {
 
         // Cloning Logic: Auto-save the cloned plan
         if (cloningPlan && dateObj >= today) {
+            // Restriction: Can only clone to empty days
+            if (plansForDay.length > 0) {
+                alert('A plan already exists on this date. Please select an empty date.');
+                return;
+            }
+
             const newPlanBody = {
                 userId: viewingUser.id,
-                title: `${cloningPlan.title} (Copy)`,
+                title: `${cloningPlan.title}`,
                 date: dateStr,
                 exercises: cloningPlan.exercises.map(ex => ({
                     name: ex.name,
