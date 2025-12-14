@@ -10,6 +10,7 @@ const AdminDashboard = () => {
     const [selectedUser, setSelectedUser] = useState(null);
     const [planForm, setPlanForm] = useState({ id: null, title: '', date: '', exercises: [] }); // Renamed from newPlan to planForm for clarity
     const [exerciseInput, setExerciseInput] = useState({ exerciseId: '', sets: '', reps: '' });
+    const [cloningPlan, setCloningPlan] = useState(null);
 
     // Exercise library state
     const [exercises, setExercises] = useState([]);
@@ -219,6 +220,13 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleClonePlan = (plan) => {
+
+        setCloningPlan(plan);
+        alert('Plan copied! Select a future date to paste it.');
+        setSelectedDate(null); // Return to calendar to let user pick a date
+    };
+
     // Calendar Helper Functions
     const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
     const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
@@ -287,25 +295,29 @@ const AdminDashboard = () => {
 
             const hasPlan = dayPlans.length > 0;
 
-            // Determine day status color
+            // Determine day status color and disability
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const isPast = dateObj < today;
+            const isDisabled = isPast && !hasPlan;
+
             let dayStatusClass = '';
+            // ... existing status logic ...
             if (hasPlan) {
                 const hasMissed = dayPlans.some(p => {
                     const isDone = p.exercises.every(e => e.done);
                     const pDate = new Date(p.date);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
+                    const t = new Date(); t.setHours(0, 0, 0, 0);
                     pDate.setHours(0, 0, 0, 0);
-                    return !isDone && pDate < today;
+                    return !isDone && pDate < t;
                 });
 
                 const hasPending = dayPlans.some(p => {
                     const isDone = p.exercises.every(e => e.done);
                     const pDate = new Date(p.date);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
+                    const t = new Date(); t.setHours(0, 0, 0, 0);
                     pDate.setHours(0, 0, 0, 0);
-                    return !isDone && pDate >= today;
+                    return !isDone && pDate >= t;
                 });
 
                 if (hasMissed) dayStatusClass = 'status-missed-day';
@@ -316,8 +328,8 @@ const AdminDashboard = () => {
             days.push(
                 <div
                     key={day}
-                    className={`calendar-day ${hasPlan ? 'has-plan' : ''} ${dayStatusClass}`}
-                    onClick={() => handleDayClick(day)}
+                    className={`calendar-day ${hasPlan ? 'has-plan' : ''} ${dayStatusClass} ${isDisabled ? 'disabled-day' : ''} ${cloningPlan && !isPast ? 'clone-target' : ''}`}
+                    onClick={() => !isDisabled && handleDayClick(day)}
                 >
                     <span className="day-number">{day}</span>
                     {hasPlan && (
