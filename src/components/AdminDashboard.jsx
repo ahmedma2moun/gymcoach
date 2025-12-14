@@ -239,12 +239,63 @@ const AdminDashboard = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     };
 
-    const handleDayClick = (day) => {
-        const dateStr = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
-        setSelectedDate(dateStr);
+    const handleDayClick = async (day) => {
+        const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+        const dateStr = dateObj.toDateString();
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
         // Check for existing plans
         const plansForDay = userPlans.filter(p => new Date(p.date).toDateString() === dateStr);
+
+        // Restriction: Disable past empty dates
+        if (dateObj < today && plansForDay.length === 0) {
+            return;
+        }
+
+        setSelectedDate(dateStr);
+
+        // Cloning Logic: Auto-save the cloned plan
+        if (cloningPlan && dateObj >= today) {
+            const newPlanBody = {
+                userId: viewingUser.id,
+                title: `${cloningPlan.title} (Copy)`,
+                date: dateStr,
+                exercises: cloningPlan.exercises.map(ex => ({
+                    name: ex.name,
+                    videoUrl: ex.videoUrl,
+                    sets: ex.sets,
+                    reps: ex.reps,
+                    done: false
+                }))
+            };
+
+            setIsLoading(true);
+            try {
+                const res = await fetch('/api/plans', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newPlanBody)
+                });
+                if (res.ok) {
+                    alert('Plan cloned successfully!');
+                    setCloningPlan(null);
+                    // Refresh plans
+                    await fetch(`/api/plans/${viewingUser.id}`)
+                        .then(res => res.json())
+                        .then(data => setUserPlans(data));
+
+                    setSelectedDate(null); // Close modal to show updated calendar
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Error cloning plan');
+            } finally {
+                setIsLoading(false);
+            }
+            return;
+        }
 
         // If plan exists and is unfinished, or if date is empty - prepare form
         // Priority: Edit unfinished plan if exists.
