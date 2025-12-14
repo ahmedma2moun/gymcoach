@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import bcrypt from 'bcryptjs';
 import './Dashboard.css';
 
 const AdminDashboard = () => {
@@ -52,10 +53,11 @@ const AdminDashboard = () => {
         e.preventDefault();
         setIsLoading(true);
         try {
+            const hashedPassword = await bcrypt.hash(newUser.password, 10);
             const res = await fetch('/api/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newUser)
+                body: JSON.stringify({ ...newUser, password: hashedPassword })
             });
             if (res.ok) {
                 setNewUser({ username: '', password: '' });
