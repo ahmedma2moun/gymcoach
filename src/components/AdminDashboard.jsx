@@ -223,407 +223,446 @@ const AdminDashboard = () => {
 
             const hasPlan = dayPlans.length > 0;
 
+            // Determine day status color
+            let dayStatusClass = '';
+            if (hasPlan) {
+                const hasMissed = dayPlans.some(p => {
+                    const isDone = p.exercises.every(e => e.done);
+                    const pDate = new Date(p.date);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    pDate.setHours(0, 0, 0, 0);
+                    return !isDone && pDate < today;
+                });
+
+                const hasPending = dayPlans.some(p => {
+                    const isDone = p.exercises.every(e => e.done);
+                    const pDate = new Date(p.date);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    pDate.setHours(0, 0, 0, 0);
+                    return !isDone && pDate >= today;
+                });
+
+                if (hasMissed) dayStatusClass = 'status-missed-day';
+                else if (hasPending) dayStatusClass = '';
+                else dayStatusClass = 'status-completed-day';
+            }
+
             days.push(
                 <div
                     key={day}
-                    className={`calendar-day ${hasPlan ? 'has-plan' : ''}`}
+                    className={`calendar-day ${hasPlan ? 'has-plan' : ''} ${dayStatusClass}`}
                     onClick={() => hasPlan && handleDayClick(day)}
                 >
                     <span className="day-number">{day}</span>
                     {hasPlan && (
-                        dayPlans.map((p, i) => (
-                            <div key={i} className="plan-indicator" title={p.title}>
-                                {p.title}
-                            </div>
-                        ))
+                        dayPlans.map((p, i) => {
+                            const isDone = p.exercises.every(e => e.done);
+                            const pDate = new Date(p.date);
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            pDate.setHours(0, 0, 0, 0);
+
+                            let statusClass = 'status-pending';
+                            if (isDone) statusClass = 'status-completed';
+                            else if (pDate < today) statusClass = 'status-missed';
+
+                            return (
+                                <div key={i} className={`plan-indicator ${statusClass}`} title={p.title}>
+                                    {p.title}
+                                </div>
+                            );
+                        })
                     )}
                 </div>
             );
         }
-
-        return (
-            <div className="calendar-view">
-                <div className="calendar-controls">
-                    <button onClick={handlePrevMonth} className="btn-small">&lt;</button>
-                    <h3>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
-                    <button onClick={handleNextMonth} className="btn-small">&gt;</button>
-                </div>
-                <div className="calendar-grid">
-                    <div className="calendar-day-header">Sun</div>
-                    <div className="calendar-day-header">Mon</div>
-                    <div className="calendar-day-header">Tue</div>
-                    <div className="calendar-day-header">Wed</div>
-                    <div className="calendar-day-header">Thu</div>
-                    <div className="calendar-day-header">Fri</div>
-                    <div className="calendar-day-header">Sat</div>
-                    {days}
-                </div>
-            </div>
-        );
-    };
-
-    // Exercise Library Functions
-    const handleCreateExercise = async (e) => {
-        e.preventDefault();
-        if (!newExercise.name) return;
-
-        const res = await fetch('/api/exercises', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newExercise)
-        });
-
-        if (res.ok) {
-            setNewExercise({ name: '', videoUrl: '' });
-            fetchExercises();
-        } else {
-            alert('Error creating exercise');
-        }
-    };
-
-    const handleUpdateExercise = async () => {
-        if (!editingExercise) return;
-
-        const res = await fetch(`/api/exercises/${editingExercise.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: editingExercise.name, videoUrl: editingExercise.videoUrl })
-        });
-
-        if (res.ok) {
-            setEditingExercise(null);
-            fetchExercises();
-        } else {
-            alert('Error updating exercise');
-        }
-    };
-
-    const handleDeleteExercise = async (exerciseId) => {
-        if (!confirm('Are you sure you want to delete this exercise?')) return;
-
-        const res = await fetch(`/api/exercises/${exerciseId}`, {
-            method: 'DELETE'
-        });
-
-        if (res.ok) {
-            fetchExercises();
-        } else {
-            alert('Error deleting exercise');
-        }
-    };
+    }
 
     return (
-        <div className="dashboard">
-            <header className="dash-header">
-                <h1>Admin Dashboard</h1>
-                <button onClick={logout} className="btn btn-outline">Logout</button>
-            </header>
+        <div className="calendar-view">
+            <div className="calendar-controls">
+                <button onClick={handlePrevMonth} className="btn-small">&lt;</button>
+                <h3>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
+                <button onClick={handleNextMonth} className="btn-small">&gt;</button>
+            </div>
+            <div className="calendar-grid">
+                <div className="calendar-day-header">Sun</div>
+                <div className="calendar-day-header">Mon</div>
+                <div className="calendar-day-header">Tue</div>
+                <div className="calendar-day-header">Wed</div>
+                <div className="calendar-day-header">Thu</div>
+                <div className="calendar-day-header">Fri</div>
+                <div className="calendar-day-header">Sat</div>
+                {days}
+            </div>
+        </div>
+    );
+};
 
-            <div className="admin-layout">
-                <div className="admin-tabs">
-                    <button
-                        className={`tab-btn ${activeTab === 'plans' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('plans')}
-                    >
-                        Training Plans
-                    </button>
-                    <button
-                        className={`tab-btn ${activeTab === 'exercises' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('exercises')}
-                    >
-                        Exercise Library
-                    </button>
-                    <button
-                        className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('users')}
-                    >
-                        Users Management
-                    </button>
-                </div>
+// Exercise Library Functions
+const handleCreateExercise = async (e) => {
+    e.preventDefault();
+    if (!newExercise.name) return;
 
-                <div className="tab-content">
-                    {activeTab === 'users' && (
-                        <div className="dash-card">
-                            <h2>Create User</h2>
-                            <form onSubmit={handleCreateUser} className="dash-form">
+    const res = await fetch('/api/exercises', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newExercise)
+    });
+
+    if (res.ok) {
+        setNewExercise({ name: '', videoUrl: '' });
+        fetchExercises();
+    } else {
+        alert('Error creating exercise');
+    }
+};
+
+const handleUpdateExercise = async () => {
+    if (!editingExercise) return;
+
+    const res = await fetch(`/api/exercises/${editingExercise.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editingExercise.name, videoUrl: editingExercise.videoUrl })
+    });
+
+    if (res.ok) {
+        setEditingExercise(null);
+        fetchExercises();
+    } else {
+        alert('Error updating exercise');
+    }
+};
+
+const handleDeleteExercise = async (exerciseId) => {
+    if (!confirm('Are you sure you want to delete this exercise?')) return;
+
+    const res = await fetch(`/api/exercises/${exerciseId}`, {
+        method: 'DELETE'
+    });
+
+    if (res.ok) {
+        fetchExercises();
+    } else {
+        alert('Error deleting exercise');
+    }
+};
+
+return (
+    <div className="dashboard">
+        <header className="dash-header">
+            <h1>Admin Dashboard</h1>
+            <button onClick={logout} className="btn btn-outline">Logout</button>
+        </header>
+
+        <div className="admin-layout">
+            <div className="admin-tabs">
+                <button
+                    className={`tab-btn ${activeTab === 'plans' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('plans')}
+                >
+                    Training Plans
+                </button>
+                <button
+                    className={`tab-btn ${activeTab === 'exercises' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('exercises')}
+                >
+                    Exercise Library
+                </button>
+                <button
+                    className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('users')}
+                >
+                    Users Management
+                </button>
+            </div>
+
+            <div className="tab-content">
+                {activeTab === 'users' && (
+                    <div className="dash-card">
+                        <h2>Create User</h2>
+                        <form onSubmit={handleCreateUser} className="dash-form">
+                            <input
+                                placeholder="Username"
+                                value={newUser.username}
+                                onChange={e => setNewUser({ ...newUser, username: e.target.value })}
+                            />
+                            <input
+                                placeholder="Password"
+                                type="password"
+                                value={newUser.password}
+                                onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                            />
+                            <button type="submit" className="btn btn-primary">Add User</button>
+                        </form>
+
+                        <h3 className="mt-4">Users List</h3>
+                        <ul className="user-list">
+                            {users.map(u => (
+                                <li key={u.id} className="user-item">
+                                    <span>{u.username} <small>({u.role})</small></span>
+                                    {u.role !== 'admin' && (
+                                        <div className="user-actions">
+                                            <button
+                                                className={`btn-small ${u.isActive !== false ? 'btn-deactivate' : 'btn-activate'}`} // Default to active if undefined
+                                                onClick={() => handleToggleStatus(u)}
+                                                title={u.isActive !== false ? 'Deactivate User' : 'Activate User'}
+                                            >
+                                                {u.isActive !== false ? '🚫' : '✅'}
+                                            </button>
+                                            <button
+                                                className="btn-small btn-view"
+                                                onClick={() => handleViewProgress(u)}
+                                                title="View Progress"
+                                            >
+                                                👁️
+                                            </button>
+                                        </div>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
+                {activeTab === 'plans' && (
+                    <div className="dash-card">
+                        <h2>Assign Training Plan</h2>
+                        <select
+                            value={selectedUser || ''}
+                            onChange={e => setSelectedUser(e.target.value)}
+                            className="full-width"
+                        >
+                            <option value="">Select User</option>
+                            {users.filter(u => u.role !== 'admin' && u.isActive !== false).map(u => (
+                                <option key={u.id} value={u.id}>{u.username}</option>
+                            ))}
+                        </select>
+
+                        <input
+                            placeholder="Plan Title (e.g., Leg Day)"
+                            value={newPlan.title}
+                            onChange={e => setNewPlan({ ...newPlan, title: e.target.value })}
+                            className="full-width mt-2"
+                        />
+
+                        <div className="input-group mt-2">
+                            <label className="input-label">Start Date:</label>
+                            <input
+                                type="date"
+                                value={newPlan.date}
+                                min={new Date().toISOString().split('T')[0]} // Prevent past dates
+                                onChange={e => setNewPlan({ ...newPlan, date: e.target.value })}
+                                onClick={(e) => e.target.showPicker()} /* Open picker on click anywhere in field */
+                                className="full-width"
+                            />
+                        </div>
+
+                        <div className="exercise-builder">
+                            <h4>Add Exercises</h4>
+                            <div className="ex-inputs">
+                                <select
+                                    value={exerciseInput.exerciseId}
+                                    onChange={e => setExerciseInput({ ...exerciseInput, exerciseId: e.target.value })}
+                                    className="exercise-select"
+                                >
+                                    <option value="">Select Exercise</option>
+                                    {exercises.map(ex => (
+                                        <option key={ex.id} value={ex.id}>{ex.name}</option>
+                                    ))}
+                                </select>
                                 <input
-                                    placeholder="Username"
-                                    value={newUser.username}
-                                    onChange={e => setNewUser({ ...newUser, username: e.target.value })}
+                                    placeholder="Sets"
+                                    value={exerciseInput.sets}
+                                    onChange={e => setExerciseInput({ ...exerciseInput, sets: e.target.value })}
                                 />
                                 <input
-                                    placeholder="Password"
-                                    type="password"
-                                    value={newUser.password}
-                                    onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                                    placeholder="Reps"
+                                    value={exerciseInput.reps}
+                                    onChange={e => setExerciseInput({ ...exerciseInput, reps: e.target.value })}
                                 />
-                                <button type="submit" className="btn btn-primary">Add User</button>
-                            </form>
+                                <button type="button" onClick={addExerciseToPlan} className="btn-small">+</button>
+                            </div>
 
-                            <h3 className="mt-4">Users List</h3>
-                            <ul className="user-list">
-                                {users.map(u => (
-                                    <li key={u.id} className="user-item">
-                                        <span>{u.username} <small>({u.role})</small></span>
-                                        {u.role !== 'admin' && (
+                            <ul className="plan-preview">
+                                {newPlan.exercises.map((ex, i) => (
+                                    <li key={i} className="preview-item">
+                                        <span>{ex.name} - {ex.sets}x{ex.reps} {ex.videoUrl && '📹'}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeExerciseFromPlan(i)}
+                                            className="btn-delete-ex"
+                                            title="Remove exercise"
+                                        >
+                                            ✕
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <button onClick={handleAssignPlan} className="btn btn-primary full-width mt-2">
+                            Assign Plan
+                        </button>
+                    </div>
+                )}
+
+                {activeTab === 'exercises' && (
+                    <div className="dash-card">
+                        <h2>Exercise Library</h2>
+                        <form onSubmit={handleCreateExercise} className="dash-form">
+                            <input
+                                placeholder="Exercise Name"
+                                value={newExercise.name}
+                                onChange={e => setNewExercise({ ...newExercise, name: e.target.value })}
+                                required
+                            />
+                            <input
+                                placeholder="YouTube URL (optional)"
+                                value={newExercise.videoUrl}
+                                onChange={e => setNewExercise({ ...newExercise, videoUrl: e.target.value })}
+                            />
+                            <button type="submit" className="btn btn-primary">Add Exercise</button>
+                        </form>
+
+                        <h3 className="mt-4">Exercise List</h3>
+                        <ul className="user-list">
+                            {exercises.map(ex => (
+                                <li key={ex.id} className="user-item">
+                                    {editingExercise?.id === ex.id ? (
+                                        <div className="edit-exercise-form">
+                                            <input
+                                                value={editingExercise.name}
+                                                onChange={e => setEditingExercise({ ...editingExercise, name: e.target.value })}
+                                                placeholder="Exercise Name"
+                                            />
+                                            <input
+                                                value={editingExercise.videoUrl}
+                                                onChange={e => setEditingExercise({ ...editingExercise, videoUrl: e.target.value })}
+                                                placeholder="Video URL"
+                                            />
+                                            <div className="edit-actions">
+                                                <button onClick={handleUpdateExercise} className="btn-small btn-save">💾</button>
+                                                <button onClick={() => setEditingExercise(null)} className="btn-small btn-cancel">✕</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span>{ex.name} {ex.videoUrl && '📹'}</span>
                                             <div className="user-actions">
                                                 <button
-                                                    className={`btn-small ${u.isActive !== false ? 'btn-deactivate' : 'btn-activate'}`} // Default to active if undefined
-                                                    onClick={() => handleToggleStatus(u)}
-                                                    title={u.isActive !== false ? 'Deactivate User' : 'Activate User'}
+                                                    className="btn-small btn-edit"
+                                                    onClick={() => setEditingExercise(ex)}
+                                                    title="Edit Exercise"
                                                 >
-                                                    {u.isActive !== false ? '🚫' : '✅'}
+                                                    ✏️
                                                 </button>
                                                 <button
-                                                    className="btn-small btn-view"
-                                                    onClick={() => handleViewProgress(u)}
-                                                    title="View Progress"
+                                                    className="btn-small btn-delete"
+                                                    onClick={() => handleDeleteExercise(ex.id)}
+                                                    title="Delete Exercise"
                                                 >
-                                                    👁️
+                                                    ✕
                                                 </button>
                                             </div>
-                                        )}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
+                                        </>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+            </div>
+        </div>
 
-                    {activeTab === 'plans' && (
-                        <div className="dash-card">
-                            <h2>Assign Training Plan</h2>
-                            <select
-                                value={selectedUser || ''}
-                                onChange={e => setSelectedUser(e.target.value)}
-                                className="full-width"
-                            >
-                                <option value="">Select User</option>
-                                {users.filter(u => u.role !== 'admin' && u.isActive !== false).map(u => (
-                                    <option key={u.id} value={u.id}>{u.username}</option>
-                                ))}
-                            </select>
+        {/* Progress Modal / Overlay */}
+        {viewingUser && (
+            <div className="modal-overlay">
+                <div className="modal-content dash-card">
+                    <div className="modal-header">
+                        <h2>Progress: {viewingUser.username} {selectedDate && `- ${selectedDate}`}</h2>
+                        <button onClick={closeProgressView} className="btn-close">X</button>
+                    </div>
 
-                            <input
-                                placeholder="Plan Title (e.g., Leg Day)"
-                                value={newPlan.title}
-                                onChange={e => setNewPlan({ ...newPlan, title: e.target.value })}
-                                className="full-width mt-2"
-                            />
+                    {!selectedDate ? (
+                        renderCalendar()
+                    ) : (
+                        <div>
+                            <button onClick={() => setSelectedDate(null)} className="btn btn-outline mb-4">&larr; Back to Calendar</button>
+                            <div className="user-plans-list">
+                                {userPlans.filter(p => new Date(p.date).toDateString() === selectedDate).length === 0 ? (
+                                    <p>No plans for this date.</p>
+                                ) : (
+                                    userPlans.filter(p => new Date(p.date).toDateString() === selectedDate).map((plan, idx) => {
+                                        const isCompleted = plan.exercises.every(e => e.done);
+                                        // Always expand in detail view for simplicity, or manage state
+                                        const isCollapsed = expandedPlans[plan.id] === undefined ? false : !expandedPlans[plan.id];
 
-                            <div className="input-group mt-2">
-                                <label className="input-label">Start Date:</label>
-                                <input
-                                    type="date"
-                                    value={newPlan.date}
-                                    min={new Date().toISOString().split('T')[0]} // Prevent past dates
-                                    onChange={e => setNewPlan({ ...newPlan, date: e.target.value })}
-                                    onClick={(e) => e.target.showPicker()} /* Open picker on click anywhere in field */
-                                    className="full-width"
-                                />
-                            </div>
-
-                            <div className="exercise-builder">
-                                <h4>Add Exercises</h4>
-                                <div className="ex-inputs">
-                                    <select
-                                        value={exerciseInput.exerciseId}
-                                        onChange={e => setExerciseInput({ ...exerciseInput, exerciseId: e.target.value })}
-                                        className="exercise-select"
-                                    >
-                                        <option value="">Select Exercise</option>
-                                        {exercises.map(ex => (
-                                            <option key={ex.id} value={ex.id}>{ex.name}</option>
-                                        ))}
-                                    </select>
-                                    <input
-                                        placeholder="Sets"
-                                        value={exerciseInput.sets}
-                                        onChange={e => setExerciseInput({ ...exerciseInput, sets: e.target.value })}
-                                    />
-                                    <input
-                                        placeholder="Reps"
-                                        value={exerciseInput.reps}
-                                        onChange={e => setExerciseInput({ ...exerciseInput, reps: e.target.value })}
-                                    />
-                                    <button type="button" onClick={addExerciseToPlan} className="btn-small">+</button>
-                                </div>
-
-                                <ul className="plan-preview">
-                                    {newPlan.exercises.map((ex, i) => (
-                                        <li key={i} className="preview-item">
-                                            <span>{ex.name} - {ex.sets}x{ex.reps} {ex.videoUrl && '📹'}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => removeExerciseFromPlan(i)}
-                                                className="btn-delete-ex"
-                                                title="Remove exercise"
-                                            >
-                                                ✕
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-
-                            <button onClick={handleAssignPlan} className="btn btn-primary full-width mt-2">
-                                Assign Plan
-                            </button>
-                        </div>
-                    )}
-
-                    {activeTab === 'exercises' && (
-                        <div className="dash-card">
-                            <h2>Exercise Library</h2>
-                            <form onSubmit={handleCreateExercise} className="dash-form">
-                                <input
-                                    placeholder="Exercise Name"
-                                    value={newExercise.name}
-                                    onChange={e => setNewExercise({ ...newExercise, name: e.target.value })}
-                                    required
-                                />
-                                <input
-                                    placeholder="YouTube URL (optional)"
-                                    value={newExercise.videoUrl}
-                                    onChange={e => setNewExercise({ ...newExercise, videoUrl: e.target.value })}
-                                />
-                                <button type="submit" className="btn btn-primary">Add Exercise</button>
-                            </form>
-
-                            <h3 className="mt-4">Exercise List</h3>
-                            <ul className="user-list">
-                                {exercises.map(ex => (
-                                    <li key={ex.id} className="user-item">
-                                        {editingExercise?.id === ex.id ? (
-                                            <div className="edit-exercise-form">
-                                                <input
-                                                    value={editingExercise.name}
-                                                    onChange={e => setEditingExercise({ ...editingExercise, name: e.target.value })}
-                                                    placeholder="Exercise Name"
-                                                />
-                                                <input
-                                                    value={editingExercise.videoUrl}
-                                                    onChange={e => setEditingExercise({ ...editingExercise, videoUrl: e.target.value })}
-                                                    placeholder="Video URL"
-                                                />
-                                                <div className="edit-actions">
-                                                    <button onClick={handleUpdateExercise} className="btn-small btn-save">💾</button>
-                                                    <button onClick={() => setEditingExercise(null)} className="btn-small btn-cancel">✕</button>
+                                        return (
+                                            <div key={idx} className={`plan-card ${isCompleted ? 'completed-plan' : ''}`}>
+                                                <div className="plan-header" onClick={() => toggleExpand(plan.id, isCollapsed)}>
+                                                    <h3>
+                                                        {plan.title}
+                                                        {isCompleted && <span className="check-icon">✓</span>}
+                                                    </h3>
+                                                    <div className="header-actions">
+                                                        <button
+                                                            className="btn-small btn-repeat"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleRepeatPlan(plan);
+                                                            }}
+                                                            title="Repeat this plan"
+                                                        >
+                                                            ↻ Repeat
+                                                        </button>
+                                                        <button
+                                                            className="btn-small btn-delete-plan"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeletePlan(plan.id);
+                                                            }}
+                                                            title="Delete Plan"
+                                                        >
+                                                            🗑️
+                                                        </button>
+                                                        <span className="toggle-icon">{isCollapsed ? '▼' : '▲'}</span>
+                                                    </div>
                                                 </div>
+                                                {!isCollapsed && (
+                                                    <div className="exercise-list">
+                                                        {plan.exercises.map((ex, i) => (
+                                                            <div key={i} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
+                                                                <div className="exercise-item">
+                                                                    <input type="checkbox" checked={ex.done} readOnly />
+                                                                    <div className="ex-details">
+                                                                        <span className="ex-name">{ex.name}</span>
+                                                                        <span className="ex-meta">
+                                                                            {ex.sets} Sets x {ex.reps} Reps
+                                                                            {ex.weight && ` @ ${ex.weight}`}
+                                                                            {ex.done && !ex.weight && ' (No weight logged)'}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
-                                        ) : (
-                                            <>
-                                                <span>{ex.name} {ex.videoUrl && '📹'}</span>
-                                                <div className="user-actions">
-                                                    <button
-                                                        className="btn-small btn-edit"
-                                                        onClick={() => setEditingExercise(ex)}
-                                                        title="Edit Exercise"
-                                                    >
-                                                        ✏️
-                                                    </button>
-                                                    <button
-                                                        className="btn-small btn-delete"
-                                                        onClick={() => handleDeleteExercise(ex.id)}
-                                                        title="Delete Exercise"
-                                                    >
-                                                        ✕
-                                                    </button>
-                                                </div>
-                                            </>
-                                        )}
-                                    </li>
-                                ))}
-                            </ul>
+                                        );
+                                    })
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
             </div>
-
-            {/* Progress Modal / Overlay */}
-            {viewingUser && (
-                <div className="modal-overlay">
-                    <div className="modal-content dash-card">
-                        <div className="modal-header">
-                            <h2>Progress: {viewingUser.username} {selectedDate && `- ${selectedDate}`}</h2>
-                            <button onClick={closeProgressView} className="btn-close">X</button>
-                        </div>
-
-                        {!selectedDate ? (
-                            renderCalendar()
-                        ) : (
-                            <div>
-                                <button onClick={() => setSelectedDate(null)} className="btn btn-outline mb-4">&larr; Back to Calendar</button>
-                                <div className="user-plans-list">
-                                    {userPlans.filter(p => new Date(p.date).toDateString() === selectedDate).length === 0 ? (
-                                        <p>No plans for this date.</p>
-                                    ) : (
-                                        userPlans.filter(p => new Date(p.date).toDateString() === selectedDate).map((plan, idx) => {
-                                            const isCompleted = plan.exercises.every(e => e.done);
-                                            // Always expand in detail view for simplicity, or manage state
-                                            const isCollapsed = expandedPlans[plan.id] === undefined ? false : !expandedPlans[plan.id];
-
-                                            return (
-                                                <div key={idx} className={`plan-card ${isCompleted ? 'completed-plan' : ''}`}>
-                                                    <div className="plan-header" onClick={() => toggleExpand(plan.id, isCollapsed)}>
-                                                        <h3>
-                                                            {plan.title}
-                                                            {isCompleted && <span className="check-icon">✓</span>}
-                                                        </h3>
-                                                        <div className="header-actions">
-                                                            <button
-                                                                className="btn-small btn-repeat"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleRepeatPlan(plan);
-                                                                }}
-                                                                title="Repeat this plan"
-                                                            >
-                                                                ↻ Repeat
-                                                            </button>
-                                                            <button
-                                                                className="btn-small btn-delete-plan"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDeletePlan(plan.id);
-                                                                }}
-                                                                title="Delete Plan"
-                                                            >
-                                                                🗑️
-                                                            </button>
-                                                            <span className="toggle-icon">{isCollapsed ? '▼' : '▲'}</span>
-                                                        </div>
-                                                    </div>
-                                                    {!isCollapsed && (
-                                                        <div className="exercise-list">
-                                                            {plan.exercises.map((ex, i) => (
-                                                                <div key={i} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
-                                                                    <div className="exercise-item">
-                                                                        <input type="checkbox" checked={ex.done} readOnly />
-                                                                        <div className="ex-details">
-                                                                            <span className="ex-name">{ex.name}</span>
-                                                                            <span className="ex-meta">
-                                                                                {ex.sets} Sets x {ex.reps} Reps
-                                                                                {ex.weight && ` @ ${ex.weight}`}
-                                                                                {ex.done && !ex.weight && ' (No weight logged)'}
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
+        )}
+    </div>
+);
 };
 
 export default AdminDashboard;

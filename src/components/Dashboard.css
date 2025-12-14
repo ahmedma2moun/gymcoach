@@ -665,3 +665,38 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     width: 100%;
     text-align: center;
 }
+
+/* Status Colors */
+.status-completed {
+    background-color: #22c55e !important;
+    /* Green */
+}
+
+.status-missed {
+    background-color: #ef4444 !important;
+    /* Red */
+}
+
+.status-pending {
+    background-color: var(--primary);
+    /* Blue */
+}
+
+/* Calendar Day Status Highlights */
+.calendar-day.has-plan.status-completed-day {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.calendar-day.has-plan.status-missed-day {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.calendar-day.has-plan.status-completed-day .day-number {
+    color: #22c55e;
+}
+
+.calendar-day.has-plan.status-missed-day .day-number {
+    color: #ef4444;
+}
