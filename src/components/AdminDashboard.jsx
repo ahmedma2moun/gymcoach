@@ -659,7 +659,11 @@ const AdminDashboard = () => {
                             <button onClick={closeProgressView} className="btn-close">X</button>
                         </div>
 
-                        {!selectedDate ? (
+                        {isLoading ? (
+                            <div className="loader-container">
+                                <div className="loader-spinner"></div>
+                            </div>
+                        ) : !selectedDate ? (
                             renderCalendar()
                         ) : (
                             <div>
