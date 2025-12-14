@@ -312,7 +312,7 @@ const AdminDashboard = () => {
                 <div
                     key={day}
                     className={`calendar-day ${hasPlan ? 'has-plan' : ''} ${dayStatusClass}`}
-                    onClick={() => hasPlan && handleDayClick(day)}
+                    onClick={() => handleDayClick(day)}
                 >
                     <span className="day-number">{day}</span>
                     {hasPlan && (
