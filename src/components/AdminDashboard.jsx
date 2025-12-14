@@ -49,16 +49,24 @@ const AdminDashboard = () => {
 
     const handleCreateUser = async (e) => {
         e.preventDefault();
-        const res = await fetch('/api/users', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newUser)
-        });
-        if (res.ok) {
-            setNewUser({ username: '', password: '' });
-            fetchUsers();
-        } else {
+        setIsLoading(true);
+        try {
+            const res = await fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newUser)
+            });
+            if (res.ok) {
+                setNewUser({ username: '', password: '' });
+                fetchUsers();
+            } else {
+                alert('Error creating user');
+            }
+        } catch (error) {
+            console.error(error);
             alert('Error creating user');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -90,29 +98,44 @@ const AdminDashboard = () => {
     const handleAssignPlan = async () => {
         if (!selectedUser || newPlan.exercises.length === 0) return;
 
-        const res = await fetch('/api/plans', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: selectedUser,
-                title: newPlan.title,
-                date: newPlan.date,
-                exercises: newPlan.exercises
-            })
-        });
+        setIsLoading(true);
+        try {
+            const res = await fetch('/api/plans', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: selectedUser,
+                    title: newPlan.title,
+                    date: newPlan.date,
+                    exercises: newPlan.exercises
+                })
+            });
 
-        if (res.ok) {
-            alert('Plan assigned!');
-            setNewPlan({ title: '', date: '', exercises: [] });
-            setSelectedUser(null);
+            if (res.ok) {
+                alert('Plan assigned!');
+                setNewPlan({ title: '', date: '', exercises: [] });
+                setSelectedUser(null);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error assigning plan');
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const handleViewProgress = async (user) => {
         setViewingUser(user);
-        const res = await fetch(`/api/plans/${user.id}`);
-        const data = await res.json();
-        setUserPlans(data);
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/plans/${user.id}`);
+            const data = await res.json();
+            setUserPlans(data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleRepeatPlan = (plan) => {
@@ -153,34 +176,50 @@ const AdminDashboard = () => {
 
     const handleToggleStatus = async (user) => {
         const newStatus = !user.isActive;
-        const res = await fetch(`/api/users/${user.id}/status`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ isActive: newStatus })
-        });
-        if (res.ok) {
-            // Update local state
-            setUsers(users.map(u => u.id === user.id ? { ...u, isActive: newStatus } : u));
-        } else {
-            alert('Error updating user status');
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/users/${user.id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isActive: newStatus })
+            });
+            if (res.ok) {
+                // Update local state
+                setUsers(users.map(u => u.id === user.id ? { ...u, isActive: newStatus } : u));
+            } else {
+                alert('Error updating user status');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error updating status');
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const handleDeletePlan = async (planId) => {
         if (!confirm('Are you sure you want to delete this plan?')) return;
 
-        const res = await fetch(`/api/plans/${planId}`, {
-            method: 'DELETE'
-        });
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/plans/${planId}`, {
+                method: 'DELETE'
+            });
 
-        if (res.ok) {
-            setUserPlans(userPlans.filter(p => p.id !== planId));
-            // Also close details if open for this plan
-            if (activeTab === 'users' && selectedDate) {
-                // Force refresh or just let the filtering handle it
+            if (res.ok) {
+                setUserPlans(userPlans.filter(p => p.id !== planId));
+                // Also close details if open for this plan
+                if (activeTab === 'users' && selectedDate) {
+                    // Force refresh or just let the filtering handle it
+                }
+            } else {
+                alert('Error deleting plan');
             }
-        } else {
+        } catch (error) {
+            console.error(error);
             alert('Error deleting plan');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -309,48 +348,72 @@ const AdminDashboard = () => {
         e.preventDefault();
         if (!newExercise.name) return;
 
-        const res = await fetch('/api/exercises', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newExercise)
-        });
+        setIsLoading(true);
+        try {
+            const res = await fetch('/api/exercises', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newExercise)
+            });
 
-        if (res.ok) {
-            setNewExercise({ name: '', videoUrl: '' });
-            fetchExercises();
-        } else {
+            if (res.ok) {
+                setNewExercise({ name: '', videoUrl: '' });
+                fetchExercises();
+            } else {
+                alert('Error creating exercise');
+            }
+        } catch (error) {
+            console.error(error);
             alert('Error creating exercise');
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const handleUpdateExercise = async () => {
         if (!editingExercise) return;
 
-        const res = await fetch(`/api/exercises/${editingExercise.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: editingExercise.name, videoUrl: editingExercise.videoUrl })
-        });
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/exercises/${editingExercise.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: editingExercise.name, videoUrl: editingExercise.videoUrl })
+            });
 
-        if (res.ok) {
-            setEditingExercise(null);
-            fetchExercises();
-        } else {
+            if (res.ok) {
+                setEditingExercise(null);
+                fetchExercises();
+            } else {
+                alert('Error updating exercise');
+            }
+        } catch (error) {
+            console.error(error);
             alert('Error updating exercise');
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const handleDeleteExercise = async (exerciseId) => {
         if (!confirm('Are you sure you want to delete this exercise?')) return;
 
-        const res = await fetch(`/api/exercises/${exerciseId}`, {
-            method: 'DELETE'
-        });
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/exercises/${exerciseId}`, {
+                method: 'DELETE'
+            });
 
-        if (res.ok) {
-            fetchExercises();
-        } else {
+            if (res.ok) {
+                fetchExercises();
+            } else {
+                alert('Error deleting exercise');
+            }
+        } catch (error) {
+            console.error(error);
             alert('Error deleting exercise');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -364,12 +427,6 @@ const AdminDashboard = () => {
             <div className="admin-layout">
                 <div className="admin-tabs">
                     <button
-                        className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('users')}
-                    >
-                        Users Management
-                    </button>
-                    <button
                         className={`tab-btn ${activeTab === 'plans' ? 'active' : ''}`}
                         onClick={() => setActiveTab('plans')}
                     >
@@ -380,6 +437,12 @@ const AdminDashboard = () => {
                         onClick={() => setActiveTab('exercises')}
                     >
                         Exercise Library
+                    </button>
+                    <button
+                        className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('users')}
+                    >
+                        Users Management
                     </button>
                 </div>
 

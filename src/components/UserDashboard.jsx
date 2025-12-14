@@ -74,25 +74,32 @@ const UserDashboard = () => {
         let weight = exerciseWeights[key] || '';
         if (weight) weight = `${weight} kg`;
 
-        const res = await fetch(`/api/plans/${planId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ exerciseIndex, done: !currentStatus, weight })
-        });
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/plans/${planId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ exerciseIndex, done: !currentStatus, weight })
+            });
 
-        if (res.ok) {
-            fetchPlans();
-            // Clear the weight inputs after marking as done
-            setExerciseWeights(prev => {
-                const newWeights = { ...prev };
-                delete newWeights[key];
-                return newWeights;
-            });
-            setExerciseWeightsLbs(prev => {
-                const newWeights = { ...prev };
-                delete newWeights[key];
-                return newWeights;
-            });
+            if (res.ok) {
+                await fetchPlans();
+                // Clear the weight inputs after marking as done
+                setExerciseWeights(prev => {
+                    const newWeights = { ...prev };
+                    delete newWeights[key];
+                    return newWeights;
+                });
+                setExerciseWeightsLbs(prev => {
+                    const newWeights = { ...prev };
+                    delete newWeights[key];
+                    return newWeights;
+                });
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
