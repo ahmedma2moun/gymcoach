@@ -4,6 +4,7 @@ import bodyParser from 'body-parser';
 import connectDB from './db.js';
 import User from './models/User.js';
 import Plan from './models/Plan.js';
+import Exercise from './models/Exercise.js';
 
 const app = express();
 const PORT = 3000;
@@ -151,6 +152,64 @@ app.patch('/api/plans/:planId', async (req, res) => {
         }
     } catch (e) {
         res.status(500).json({ message: 'Error updating plan' });
+    }
+});
+
+// --- Exercise Library ---
+app.get('/api/exercises', async (req, res) => {
+    await connectDB();
+    try {
+        const exercises = await Exercise.find({}).sort({ name: 1 });
+        res.json(exercises);
+    } catch (e) {
+        res.status(500).json({ message: 'Error fetching exercises' });
+    }
+});
+
+app.post('/api/exercises', async (req, res) => {
+    await connectDB();
+    const { name, videoUrl } = req.body;
+
+    try {
+        const newExercise = await Exercise.create({
+            id: Date.now(),
+            name,
+            videoUrl: videoUrl || ''
+        });
+        res.json(newExercise);
+    } catch (e) {
+        res.status(500).json({ message: 'Error creating exercise' });
+    }
+});
+
+app.put('/api/exercises/:id', async (req, res) => {
+    await connectDB();
+    const { name, videoUrl } = req.body;
+
+    try {
+        const exercise = await Exercise.findOneAndUpdate(
+            { id: req.params.id },
+            { name, videoUrl },
+            { new: true }
+        );
+
+        if (!exercise) return res.status(404).json({ message: 'Exercise not found' });
+        res.json(exercise);
+    } catch (e) {
+        res.status(500).json({ message: 'Error updating exercise' });
+    }
+});
+
+app.delete('/api/exercises/:id', async (req, res) => {
+    await connectDB();
+    try {
+        const result = await Exercise.deleteOne({ id: req.params.id });
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ message: 'Exercise not found' });
+        }
+        res.json({ message: 'Exercise deleted' });
+    } catch (e) {
+        res.status(500).json({ message: 'Error deleting exercise' });
     }
 });
 

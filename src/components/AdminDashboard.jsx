@@ -8,7 +8,12 @@ const AdminDashboard = () => {
     const [newUser, setNewUser] = useState({ username: '', password: '' });
     const [selectedUser, setSelectedUser] = useState(null);
     const [newPlan, setNewPlan] = useState({ title: '', date: '', exercises: [] });
-    const [exerciseInput, setExerciseInput] = useState({ name: '', sets: '', reps: '', videoUrl: '' });
+    const [exerciseInput, setExerciseInput] = useState({ exerciseId: '', sets: '', reps: '' });
+
+    // Exercise library state
+    const [exercises, setExercises] = useState([]);
+    const [newExercise, setNewExercise] = useState({ name: '', videoUrl: '' });
+    const [editingExercise, setEditingExercise] = useState(null);
 
     // New state for viewing progress
     const [viewingUser, setViewingUser] = useState(null);
@@ -17,12 +22,19 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         fetchUsers();
+        fetchExercises();
     }, []);
 
     const fetchUsers = async () => {
         const res = await fetch('/api/users');
         const data = await res.json();
         setUsers(data);
+    };
+
+    const fetchExercises = async () => {
+        const res = await fetch('/api/exercises');
+        const data = await res.json();
+        setExercises(data);
     };
 
     const handleCreateUser = async (e) => {
@@ -41,11 +53,21 @@ const AdminDashboard = () => {
     };
 
     const addExerciseToPlan = () => {
+        if (!exerciseInput.exerciseId || !exerciseInput.sets || !exerciseInput.reps) return;
+
+        const selectedExercise = exercises.find(ex => ex.id == exerciseInput.exerciseId);
+        if (!selectedExercise) return;
+
         setNewPlan({
             ...newPlan,
-            exercises: [...newPlan.exercises, exerciseInput]
+            exercises: [...newPlan.exercises, {
+                name: selectedExercise.name,
+                videoUrl: selectedExercise.videoUrl,
+                sets: exerciseInput.sets,
+                reps: exerciseInput.reps
+            }]
         });
-        setExerciseInput({ name: '', sets: '', reps: '', videoUrl: '' });
+        setExerciseInput({ exerciseId: '', sets: '', reps: '' });
     };
 
     const removeExerciseFromPlan = (indexToRemove) => {
@@ -146,6 +168,56 @@ const AdminDashboard = () => {
         }
     };
 
+    // Exercise Library Functions
+    const handleCreateExercise = async (e) => {
+        e.preventDefault();
+        if (!newExercise.name) return;
+
+        const res = await fetch('/api/exercises', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newExercise)
+        });
+
+        if (res.ok) {
+            setNewExercise({ name: '', videoUrl: '' });
+            fetchExercises();
+        } else {
+            alert('Error creating exercise');
+        }
+    };
+
+    const handleUpdateExercise = async () => {
+        if (!editingExercise) return;
+
+        const res = await fetch(`/api/exercises/${editingExercise.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: editingExercise.name, videoUrl: editingExercise.videoUrl })
+        });
+
+        if (res.ok) {
+            setEditingExercise(null);
+            fetchExercises();
+        } else {
+            alert('Error updating exercise');
+        }
+    };
+
+    const handleDeleteExercise = async (exerciseId) => {
+        if (!confirm('Are you sure you want to delete this exercise?')) return;
+
+        const res = await fetch(`/api/exercises/${exerciseId}`, {
+            method: 'DELETE'
+        });
+
+        if (res.ok) {
+            fetchExercises();
+        } else {
+            alert('Error deleting exercise');
+        }
+    };
+
     return (
         <div className="dashboard">
             <header className="dash-header">
@@ -234,11 +306,16 @@ const AdminDashboard = () => {
                     <div className="exercise-builder">
                         <h4>Add Exercises</h4>
                         <div className="ex-inputs">
-                            <input
-                                placeholder="Exercise Name"
-                                value={exerciseInput.name}
-                                onChange={e => setExerciseInput({ ...exerciseInput, name: e.target.value })}
-                            />
+                            <select
+                                value={exerciseInput.exerciseId}
+                                onChange={e => setExerciseInput({ ...exerciseInput, exerciseId: e.target.value })}
+                                className="exercise-select"
+                            >
+                                <option value="">Select Exercise</option>
+                                {exercises.map(ex => (
+                                    <option key={ex.id} value={ex.id}>{ex.name}</option>
+                                ))}
+                            </select>
                             <input
                                 placeholder="Sets"
                                 value={exerciseInput.sets}
@@ -248,11 +325,6 @@ const AdminDashboard = () => {
                                 placeholder="Reps"
                                 value={exerciseInput.reps}
                                 onChange={e => setExerciseInput({ ...exerciseInput, reps: e.target.value })}
-                            />
-                            <input
-                                placeholder="YouTube URL"
-                                value={exerciseInput.videoUrl}
-                                onChange={e => setExerciseInput({ ...exerciseInput, videoUrl: e.target.value })}
                             />
                             <button type="button" onClick={addExerciseToPlan} className="btn-small">+</button>
                         </div>
@@ -277,6 +349,71 @@ const AdminDashboard = () => {
                     <button onClick={handleAssignPlan} className="btn btn-primary full-width mt-2">
                         Assign Plan
                     </button>
+                </div>
+
+                {/* Exercise Library Card */}
+                <div className="dash-card">
+                    <h2>Exercise Library</h2>
+                    <form onSubmit={handleCreateExercise} className="dash-form">
+                        <input
+                            placeholder="Exercise Name"
+                            value={newExercise.name}
+                            onChange={e => setNewExercise({ ...newExercise, name: e.target.value })}
+                            required
+                        />
+                        <input
+                            placeholder="YouTube URL (optional)"
+                            value={newExercise.videoUrl}
+                            onChange={e => setNewExercise({ ...newExercise, videoUrl: e.target.value })}
+                        />
+                        <button type="submit" className="btn btn-primary">Add Exercise</button>
+                    </form>
+
+                    <h3 className="mt-4">Exercise List</h3>
+                    <ul className="user-list">
+                        {exercises.map(ex => (
+                            <li key={ex.id} className="user-item">
+                                {editingExercise?.id === ex.id ? (
+                                    <div className="edit-exercise-form">
+                                        <input
+                                            value={editingExercise.name}
+                                            onChange={e => setEditingExercise({ ...editingExercise, name: e.target.value })}
+                                            placeholder="Exercise Name"
+                                        />
+                                        <input
+                                            value={editingExercise.videoUrl}
+                                            onChange={e => setEditingExercise({ ...editingExercise, videoUrl: e.target.value })}
+                                            placeholder="Video URL"
+                                        />
+                                        <div className="edit-actions">
+                                            <button onClick={handleUpdateExercise} className="btn-small btn-save">💾</button>
+                                            <button onClick={() => setEditingExercise(null)} className="btn-small btn-cancel">✕</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <span>{ex.name} {ex.videoUrl && '📹'}</span>
+                                        <div className="user-actions">
+                                            <button
+                                                className="btn-small btn-edit"
+                                                onClick={() => setEditingExercise(ex)}
+                                                title="Edit Exercise"
+                                            >
+                                                ✏️
+                                            </button>
+                                            <button
+                                                className="btn-small btn-delete"
+                                                onClick={() => handleDeleteExercise(ex.id)}
+                                                title="Delete Exercise"
+                                            >
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             </div>
 
