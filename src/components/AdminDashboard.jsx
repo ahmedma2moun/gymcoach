@@ -5,6 +5,7 @@ import './Dashboard.css';
 const AdminDashboard = () => {
     const { logout } = useAuth();
     const [users, setUsers] = useState([]);
+    const [activeTab, setActiveTab] = useState('users');
     const [newUser, setNewUser] = useState({ username: '', password: '' });
     const [selectedUser, setSelectedUser] = useState(null);
     const [newPlan, setNewPlan] = useState({ title: '', date: '', exercises: [] });
@@ -225,195 +226,223 @@ const AdminDashboard = () => {
                 <button onClick={logout} className="btn btn-outline">Logout</button>
             </header>
 
-            <div className="dash-grid">
-                <div className="dash-card">
-                    <h2>Create User</h2>
-                    <form onSubmit={handleCreateUser} className="dash-form">
-                        <input
-                            placeholder="Username"
-                            value={newUser.username}
-                            onChange={e => setNewUser({ ...newUser, username: e.target.value })}
-                        />
-                        <input
-                            placeholder="Password"
-                            type="password"
-                            value={newUser.password}
-                            onChange={e => setNewUser({ ...newUser, password: e.target.value })}
-                        />
-                        <button type="submit" className="btn btn-primary">Add User</button>
-                    </form>
-
-                    <h3 className="mt-4">Users List</h3>
-                    <ul className="user-list">
-                        {users.map(u => (
-                            <li key={u.id} className="user-item">
-                                <span>{u.username} <small>({u.role})</small></span>
-                                {u.role !== 'admin' && (
-                                    <div className="user-actions">
-                                        <button
-                                            className={`btn-small ${u.isActive !== false ? 'btn-deactivate' : 'btn-activate'}`} // Default to active if undefined
-                                            onClick={() => handleToggleStatus(u)}
-                                            title={u.isActive !== false ? 'Deactivate User' : 'Activate User'}
-                                        >
-                                            {u.isActive !== false ? '🚫' : '✅'}
-                                        </button>
-                                        <button
-                                            className="btn-small btn-view"
-                                            onClick={() => handleViewProgress(u)}
-                                            title="View Progress"
-                                        >
-                                            👁️
-                                        </button>
-                                    </div>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-
-                <div className="dash-card">
-                    <h2>Assign Training Plan</h2>
-                    <select
-                        value={selectedUser || ''}
-                        onChange={e => setSelectedUser(e.target.value)}
-                        className="full-width"
+            <div className="admin-layout">
+                <div className="admin-tabs">
+                    <button
+                        className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('users')}
                     >
-                        <option value="">Select User</option>
-                        {users.filter(u => u.role !== 'admin' && u.isActive !== false).map(u => (
-                            <option key={u.id} value={u.id}>{u.username}</option>
-                        ))}
-                    </select>
-
-                    <input
-                        placeholder="Plan Title (e.g., Leg Day)"
-                        value={newPlan.title}
-                        onChange={e => setNewPlan({ ...newPlan, title: e.target.value })}
-                        className="full-width mt-2"
-                    />
-
-                    <div className="input-group mt-2">
-                        <label className="input-label">Start Date:</label>
-                        <input
-                            type="date"
-                            value={newPlan.date}
-                            min={new Date().toISOString().split('T')[0]} // Prevent past dates
-                            onChange={e => setNewPlan({ ...newPlan, date: e.target.value })}
-                            onClick={(e) => e.target.showPicker()} /* Open picker on click anywhere in field */
-                            className="full-width"
-                        />
-                    </div>
-
-                    <div className="exercise-builder">
-                        <h4>Add Exercises</h4>
-                        <div className="ex-inputs">
-                            <select
-                                value={exerciseInput.exerciseId}
-                                onChange={e => setExerciseInput({ ...exerciseInput, exerciseId: e.target.value })}
-                                className="exercise-select"
-                            >
-                                <option value="">Select Exercise</option>
-                                {exercises.map(ex => (
-                                    <option key={ex.id} value={ex.id}>{ex.name}</option>
-                                ))}
-                            </select>
-                            <input
-                                placeholder="Sets"
-                                value={exerciseInput.sets}
-                                onChange={e => setExerciseInput({ ...exerciseInput, sets: e.target.value })}
-                            />
-                            <input
-                                placeholder="Reps"
-                                value={exerciseInput.reps}
-                                onChange={e => setExerciseInput({ ...exerciseInput, reps: e.target.value })}
-                            />
-                            <button type="button" onClick={addExerciseToPlan} className="btn-small">+</button>
-                        </div>
-
-                        <ul className="plan-preview">
-                            {newPlan.exercises.map((ex, i) => (
-                                <li key={i} className="preview-item">
-                                    <span>{ex.name} - {ex.sets}x{ex.reps} {ex.videoUrl && '📹'}</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => removeExerciseFromPlan(i)}
-                                        className="btn-delete-ex"
-                                        title="Remove exercise"
-                                    >
-                                        ✕
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    <button onClick={handleAssignPlan} className="btn btn-primary full-width mt-2">
-                        Assign Plan
+                        Users Management
+                    </button>
+                    <button
+                        className={`tab-btn ${activeTab === 'plans' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('plans')}
+                    >
+                        Training Plans
+                    </button>
+                    <button
+                        className={`tab-btn ${activeTab === 'exercises' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('exercises')}
+                    >
+                        Exercise Library
                     </button>
                 </div>
 
-                {/* Exercise Library Card */}
-                <div className="dash-card">
-                    <h2>Exercise Library</h2>
-                    <form onSubmit={handleCreateExercise} className="dash-form">
-                        <input
-                            placeholder="Exercise Name"
-                            value={newExercise.name}
-                            onChange={e => setNewExercise({ ...newExercise, name: e.target.value })}
-                            required
-                        />
-                        <input
-                            placeholder="YouTube URL (optional)"
-                            value={newExercise.videoUrl}
-                            onChange={e => setNewExercise({ ...newExercise, videoUrl: e.target.value })}
-                        />
-                        <button type="submit" className="btn btn-primary">Add Exercise</button>
-                    </form>
+                <div className="tab-content">
+                    {activeTab === 'users' && (
+                        <div className="dash-card">
+                            <h2>Create User</h2>
+                            <form onSubmit={handleCreateUser} className="dash-form">
+                                <input
+                                    placeholder="Username"
+                                    value={newUser.username}
+                                    onChange={e => setNewUser({ ...newUser, username: e.target.value })}
+                                />
+                                <input
+                                    placeholder="Password"
+                                    type="password"
+                                    value={newUser.password}
+                                    onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                                />
+                                <button type="submit" className="btn btn-primary">Add User</button>
+                            </form>
 
-                    <h3 className="mt-4">Exercise List</h3>
-                    <ul className="user-list">
-                        {exercises.map(ex => (
-                            <li key={ex.id} className="user-item">
-                                {editingExercise?.id === ex.id ? (
-                                    <div className="edit-exercise-form">
-                                        <input
-                                            value={editingExercise.name}
-                                            onChange={e => setEditingExercise({ ...editingExercise, name: e.target.value })}
-                                            placeholder="Exercise Name"
-                                        />
-                                        <input
-                                            value={editingExercise.videoUrl}
-                                            onChange={e => setEditingExercise({ ...editingExercise, videoUrl: e.target.value })}
-                                            placeholder="Video URL"
-                                        />
-                                        <div className="edit-actions">
-                                            <button onClick={handleUpdateExercise} className="btn-small btn-save">💾</button>
-                                            <button onClick={() => setEditingExercise(null)} className="btn-small btn-cancel">✕</button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <span>{ex.name} {ex.videoUrl && '📹'}</span>
-                                        <div className="user-actions">
+                            <h3 className="mt-4">Users List</h3>
+                            <ul className="user-list">
+                                {users.map(u => (
+                                    <li key={u.id} className="user-item">
+                                        <span>{u.username} <small>({u.role})</small></span>
+                                        {u.role !== 'admin' && (
+                                            <div className="user-actions">
+                                                <button
+                                                    className={`btn-small ${u.isActive !== false ? 'btn-deactivate' : 'btn-activate'}`} // Default to active if undefined
+                                                    onClick={() => handleToggleStatus(u)}
+                                                    title={u.isActive !== false ? 'Deactivate User' : 'Activate User'}
+                                                >
+                                                    {u.isActive !== false ? '🚫' : '✅'}
+                                                </button>
+                                                <button
+                                                    className="btn-small btn-view"
+                                                    onClick={() => handleViewProgress(u)}
+                                                    title="View Progress"
+                                                >
+                                                    👁️
+                                                </button>
+                                            </div>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    {activeTab === 'plans' && (
+                        <div className="dash-card">
+                            <h2>Assign Training Plan</h2>
+                            <select
+                                value={selectedUser || ''}
+                                onChange={e => setSelectedUser(e.target.value)}
+                                className="full-width"
+                            >
+                                <option value="">Select User</option>
+                                {users.filter(u => u.role !== 'admin' && u.isActive !== false).map(u => (
+                                    <option key={u.id} value={u.id}>{u.username}</option>
+                                ))}
+                            </select>
+
+                            <input
+                                placeholder="Plan Title (e.g., Leg Day)"
+                                value={newPlan.title}
+                                onChange={e => setNewPlan({ ...newPlan, title: e.target.value })}
+                                className="full-width mt-2"
+                            />
+
+                            <div className="input-group mt-2">
+                                <label className="input-label">Start Date:</label>
+                                <input
+                                    type="date"
+                                    value={newPlan.date}
+                                    min={new Date().toISOString().split('T')[0]} // Prevent past dates
+                                    onChange={e => setNewPlan({ ...newPlan, date: e.target.value })}
+                                    onClick={(e) => e.target.showPicker()} /* Open picker on click anywhere in field */
+                                    className="full-width"
+                                />
+                            </div>
+
+                            <div className="exercise-builder">
+                                <h4>Add Exercises</h4>
+                                <div className="ex-inputs">
+                                    <select
+                                        value={exerciseInput.exerciseId}
+                                        onChange={e => setExerciseInput({ ...exerciseInput, exerciseId: e.target.value })}
+                                        className="exercise-select"
+                                    >
+                                        <option value="">Select Exercise</option>
+                                        {exercises.map(ex => (
+                                            <option key={ex.id} value={ex.id}>{ex.name}</option>
+                                        ))}
+                                    </select>
+                                    <input
+                                        placeholder="Sets"
+                                        value={exerciseInput.sets}
+                                        onChange={e => setExerciseInput({ ...exerciseInput, sets: e.target.value })}
+                                    />
+                                    <input
+                                        placeholder="Reps"
+                                        value={exerciseInput.reps}
+                                        onChange={e => setExerciseInput({ ...exerciseInput, reps: e.target.value })}
+                                    />
+                                    <button type="button" onClick={addExerciseToPlan} className="btn-small">+</button>
+                                </div>
+
+                                <ul className="plan-preview">
+                                    {newPlan.exercises.map((ex, i) => (
+                                        <li key={i} className="preview-item">
+                                            <span>{ex.name} - {ex.sets}x{ex.reps} {ex.videoUrl && '📹'}</span>
                                             <button
-                                                className="btn-small btn-edit"
-                                                onClick={() => setEditingExercise(ex)}
-                                                title="Edit Exercise"
+                                                type="button"
+                                                onClick={() => removeExerciseFromPlan(i)}
+                                                className="btn-delete-ex"
+                                                title="Remove exercise"
                                             >
-                                                ✏️
+                                                ✕
                                             </button>
-                                            <button
-                                                className="btn-small btn-delete"
-                                                onClick={() => handleDeleteExercise(ex.id)}
-                                                title="Delete Exercise"
-                                            >
-                                                🗑️
-                                            </button>
-                                        </div>
-                                    </>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            <button onClick={handleAssignPlan} className="btn btn-primary full-width mt-2">
+                                Assign Plan
+                            </button>
+                        </div>
+                    )}
+
+                    {activeTab === 'exercises' && (
+                        <div className="dash-card">
+                            <h2>Exercise Library</h2>
+                            <form onSubmit={handleCreateExercise} className="dash-form">
+                                <input
+                                    placeholder="Exercise Name"
+                                    value={newExercise.name}
+                                    onChange={e => setNewExercise({ ...newExercise, name: e.target.value })}
+                                    required
+                                />
+                                <input
+                                    placeholder="YouTube URL (optional)"
+                                    value={newExercise.videoUrl}
+                                    onChange={e => setNewExercise({ ...newExercise, videoUrl: e.target.value })}
+                                />
+                                <button type="submit" className="btn btn-primary">Add Exercise</button>
+                            </form>
+
+                            <h3 className="mt-4">Exercise List</h3>
+                            <ul className="user-list">
+                                {exercises.map(ex => (
+                                    <li key={ex.id} className="user-item">
+                                        {editingExercise?.id === ex.id ? (
+                                            <div className="edit-exercise-form">
+                                                <input
+                                                    value={editingExercise.name}
+                                                    onChange={e => setEditingExercise({ ...editingExercise, name: e.target.value })}
+                                                    placeholder="Exercise Name"
+                                                />
+                                                <input
+                                                    value={editingExercise.videoUrl}
+                                                    onChange={e => setEditingExercise({ ...editingExercise, videoUrl: e.target.value })}
+                                                    placeholder="Video URL"
+                                                />
+                                                <div className="edit-actions">
+                                                    <button onClick={handleUpdateExercise} className="btn-small btn-save">💾</button>
+                                                    <button onClick={() => setEditingExercise(null)} className="btn-small btn-cancel">✕</button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <span>{ex.name} {ex.videoUrl && '📹'}</span>
+                                                <div className="user-actions">
+                                                    <button
+                                                        className="btn-small btn-edit"
+                                                        onClick={() => setEditingExercise(ex)}
+                                                        title="Edit Exercise"
+                                                    >
+                                                        ✏️
+                                                    </button>
+                                                    <button
+                                                        className="btn-small btn-delete"
+                                                        onClick={() => handleDeleteExercise(ex.id)}
+                                                        title="Delete Exercise"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
             </div>
 
