@@ -7,7 +7,8 @@ const UserDashboard = () => {
     const [plans, setPlans] = useState([]);
     const [openVideoIndex, setOpenVideoIndex] = useState(null);
     const [expandedPlans, setExpandedPlans] = useState({});
-    const [exerciseWeights, setExerciseWeights] = useState({});
+    const [exerciseWeights, setExerciseWeights] = useState({}); // Stores in kg
+    const [exerciseWeightsLbs, setExerciseWeightsLbs] = useState({}); // Stores in lbs for display
     const [previousWeights, setPreviousWeights] = useState({});
 
     useEffect(() => {
@@ -48,7 +49,8 @@ const UserDashboard = () => {
 
     const toggleExercise = async (planId, exerciseIndex, currentStatus) => {
         const key = `${planId}-${exerciseIndex}`;
-        const weight = exerciseWeights[key] || '';
+        let weight = exerciseWeights[key] || '';
+        if (weight) weight = `${weight} kg`;
 
         const res = await fetch(`/api/plans/${planId}`, {
             method: 'PATCH',
@@ -58,8 +60,13 @@ const UserDashboard = () => {
 
         if (res.ok) {
             fetchPlans();
-            // Clear the weight input after marking as done
+            // Clear the weight inputs after marking as done
             setExerciseWeights(prev => {
+                const newWeights = { ...prev };
+                delete newWeights[key];
+                return newWeights;
+            });
+            setExerciseWeightsLbs(prev => {
                 const newWeights = { ...prev };
                 delete newWeights[key];
                 return newWeights;
@@ -67,12 +74,36 @@ const UserDashboard = () => {
         }
     };
 
-    const handleWeightChange = (planId, exerciseIndex, value) => {
+    const handleWeightChange = (planId, exerciseIndex, value, unit) => {
         const key = `${planId}-${exerciseIndex}`;
-        setExerciseWeights(prev => ({
-            ...prev,
-            [key]: value
-        }));
+
+        if (unit === 'kg') {
+            // Update kg value
+            setExerciseWeights(prev => ({
+                ...prev,
+                [key]: value
+            }));
+
+            // Auto-calculate lbs (1 kg = 2.20462 lbs)
+            const lbsValue = value ? (parseFloat(value) * 2.20462).toFixed(1) : '';
+            setExerciseWeightsLbs(prev => ({
+                ...prev,
+                [key]: lbsValue
+            }));
+        } else if (unit === 'lbs') {
+            // Update lbs value
+            setExerciseWeightsLbs(prev => ({
+                ...prev,
+                [key]: value
+            }));
+
+            // Auto-calculate kg (1 lbs = 0.453592 kg)
+            const kgValue = value ? (parseFloat(value) * 0.453592).toFixed(1) : '';
+            setExerciseWeights(prev => ({
+                ...prev,
+                [key]: kgValue
+            }));
+        }
     };
 
     const getEmbedUrl = (url) => {
@@ -157,17 +188,38 @@ const UserDashboard = () => {
                                                             )}
                                                         </div>
                                                         {!ex.done && (
-                                                            <input
-                                                                type="text"
-                                                                className="weight-input"
-                                                                placeholder="Weight (e.g., 50kg)"
-                                                                value={exerciseWeights[`${plan.id}-${idx}`] || ''}
-                                                                onChange={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleWeightChange(plan.id, idx, e.target.value);
-                                                                }}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            />
+                                                            <div className="weight-inputs-container">
+                                                                <div className="weight-input-group">
+                                                                    <input
+                                                                        type="number"
+                                                                        className="weight-input"
+                                                                        placeholder="kg"
+                                                                        value={exerciseWeights[`${plan.id}-${idx}`] || ''}
+                                                                        onChange={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleWeightChange(plan.id, idx, e.target.value, 'kg');
+                                                                        }}
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        step="0.1"
+                                                                    />
+                                                                    <span className="weight-unit">kg</span>
+                                                                </div>
+                                                                <div className="weight-input-group">
+                                                                    <input
+                                                                        type="number"
+                                                                        className="weight-input"
+                                                                        placeholder="lbs"
+                                                                        value={exerciseWeightsLbs[`${plan.id}-${idx}`] || ''}
+                                                                        onChange={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleWeightChange(plan.id, idx, e.target.value, 'lbs');
+                                                                        }}
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        step="0.1"
+                                                                    />
+                                                                    <span className="weight-unit">lbs</span>
+                                                                </div>
+                                                            </div>
                                                         )}
                                                         {embedUrl && (
                                                             <button

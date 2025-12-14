@@ -288,15 +288,37 @@
 }
 
 /* Weight Input and Display */
+.weight-inputs-container {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.weight-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
 .weight-input {
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    /* Space for unit */
     background: rgba(15, 23, 42, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--text-main);
     border-radius: var(--radius-sm);
     font-size: 0.9rem;
-    width: 120px;
+    width: 90px;
     transition: var(--transition);
+    /* Remove number spinner arrows for cleaner look */
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.weight-input::-webkit-outer-spin-button,
+.weight-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 .weight-input:focus {
@@ -305,9 +327,12 @@
     background: rgba(15, 23, 42, 0.8);
 }
 
-.weight-input::placeholder {
+.weight-unit {
+    position: absolute;
+    right: 0.5rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
-    opacity: 0.6;
+    pointer-events: none;
 }
 
 .previous-weight {
