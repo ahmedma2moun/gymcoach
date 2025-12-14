@@ -25,19 +25,27 @@ app.post('/api/login', async (req, res) => {
     try {
         // Case-insensitive search for username
         const user = await User.findOne({
-            username: { $regex: new RegExp(`^${username}$`, 'i') },
-            password
+            username: { $regex: new RegExp(`^${username}$`, 'i') }
         });
-        if (user) {
-            if (user.isActive === false) {
-                return res.status(403).json({ message: 'Account is deactivated' });
-            }
-            const { password: _, ...userWithoutPass } = user.toObject();
-            res.json(userWithoutPass);
-        } else {
-            res.status(401).json({ message: 'Invalid credentials' });
+
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
+
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        if (user.isActive === false) {
+            return res.status(403).json({ message: 'Account is deactivated' });
+        }
+
+        const { password: _, ...userWithoutPass } = user.toObject();
+        res.json(userWithoutPass);
+
     } catch (e) {
+        console.error(e);
         res.status(500).json({ message: 'Error logging in' });
     }
 });
