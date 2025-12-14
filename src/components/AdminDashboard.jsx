@@ -121,9 +121,14 @@ const AdminDashboard = () => {
 
             if (res.ok) {
                 alert(isEditing ? 'Plan updated!' : 'Plan created!');
-                setPlanForm({ id: null, title: '', date: '', exercises: [] }); // Reset
+                setPlanForm({ id: null, title: '', date: '', exercises: [] }); // Reset form
                 // Refresh plans
-                handleViewProgress(viewingUser);
+                await fetch(`/api/plans/${viewingUser.id}`)
+                    .then(res => res.json())
+                    .then(data => setUserPlans(data));
+
+                // Return to calendar view instead of closing modal or staying on form
+                setSelectedDate(null);
             }
         } catch (error) {
             console.error(error);
@@ -471,7 +476,7 @@ const AdminDashboard = () => {
                             <div className="dash-card">
                                 <h3 className="mt-4">Users List</h3>
                                 <ul className="user-list">
-                                    {users.map(u => (
+                                    {users.filter(u => u.role !== 'admin').map(u => (
                                         <li key={u.id} className="user-item">
                                             <span>{u.username} <small>({u.role})</small></span>
                                             {u.role !== 'admin' && (
@@ -491,6 +496,72 @@ const AdminDashboard = () => {
                                                         📅
                                                     </button>
                                                 </div>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {activeTab === 'exercises' && (
+                            <div className="dash-card">
+                                <h2>Exercise Library</h2>
+                                <form onSubmit={handleCreateExercise} className="dash-form">
+                                    <input
+                                        placeholder="Exercise Name"
+                                        value={newExercise.name}
+                                        onChange={e => setNewExercise({ ...newExercise, name: e.target.value })}
+                                        required
+                                    />
+                                    <input
+                                        placeholder="YouTube URL (optional)"
+                                        value={newExercise.videoUrl}
+                                        onChange={e => setNewExercise({ ...newExercise, videoUrl: e.target.value })}
+                                    />
+                                    <button type="submit" className="btn btn-primary">Add Exercise</button>
+                                </form>
+
+                                <h3 className="mt-4">Exercise List</h3>
+                                <ul className="user-list">
+                                    {exercises.map(ex => (
+                                        <li key={ex.id} className="user-item">
+                                            {editingExercise?.id === ex.id ? (
+                                                <div className="edit-exercise-form">
+                                                    <input
+                                                        value={editingExercise.name}
+                                                        onChange={e => setEditingExercise({ ...editingExercise, name: e.target.value })}
+                                                        placeholder="Exercise Name"
+                                                    />
+                                                    <input
+                                                        value={editingExercise.videoUrl}
+                                                        onChange={e => setEditingExercise({ ...editingExercise, videoUrl: e.target.value })}
+                                                        placeholder="Video URL"
+                                                    />
+                                                    <div className="edit-actions">
+                                                        <button onClick={handleUpdateExercise} className="btn-small btn-save">💾</button>
+                                                        <button onClick={() => setEditingExercise(null)} className="btn-small btn-cancel">✕</button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <span>{ex.name} {ex.videoUrl && '📹'}</span>
+                                                    <div className="user-actions">
+                                                        <button
+                                                            className="btn-small btn-edit"
+                                                            onClick={() => setEditingExercise(ex)}
+                                                            title="Edit Exercise"
+                                                        >
+                                                            ✏️
+                                                        </button>
+                                                        <button
+                                                            className="btn-small btn-delete"
+                                                            onClick={() => handleDeleteExercise(ex.id)}
+                                                            title="Delete Exercise"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                </>
                                             )}
                                         </li>
                                     ))}
