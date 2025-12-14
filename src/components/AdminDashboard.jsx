@@ -5,7 +5,7 @@ import './Dashboard.css';
 const AdminDashboard = () => {
     const { logout } = useAuth();
     const [users, setUsers] = useState([]);
-    const [activeTab, setActiveTab] = useState('users');
+    const [activeTab, setActiveTab] = useState('plans');
     const [newUser, setNewUser] = useState({ username: '', password: '' });
     const [selectedUser, setSelectedUser] = useState(null);
     const [newPlan, setNewPlan] = useState({ title: '', date: '', exercises: [] });
@@ -229,12 +229,6 @@ const AdminDashboard = () => {
             <div className="admin-layout">
                 <div className="admin-tabs">
                     <button
-                        className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('users')}
-                    >
-                        Users Management
-                    </button>
-                    <button
                         className={`tab-btn ${activeTab === 'plans' ? 'active' : ''}`}
                         onClick={() => setActiveTab('plans')}
                     >
@@ -245,6 +239,12 @@ const AdminDashboard = () => {
                         onClick={() => setActiveTab('exercises')}
                     >
                         Exercise Library
+                    </button>
+                    <button
+                        className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('users')}
+                    >
+                        Users Management
                     </button>
                 </div>
 
