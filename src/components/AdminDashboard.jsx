@@ -705,6 +705,16 @@ const AdminDashboard = () => {
                                                         </h3>
 
                                                         <button
+                                                            className="btn-small btn-clone"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleClonePlan(plan);
+                                                            }}
+                                                            title="Clone Plan"
+                                                        >
+                                                            ❐
+                                                        </button>
+                                                        <button
                                                             className="btn-small btn-delete-plan"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
