@@ -356,7 +356,12 @@ const AdminDashboard = () => {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const isPast = dateObj < today;
-            const isDisabled = isPast && !hasPlan;
+            /* 
+               Disabled if:
+               1. Past date AND no plan (default restriction)
+               2. Cloning Mode AND date has a plan (prevent overwrite)
+            */
+            const isDisabled = (isPast && !hasPlan) || (cloningPlan && hasPlan);
 
             let dayStatusClass = '';
             // ... existing status logic ...
@@ -385,7 +390,7 @@ const AdminDashboard = () => {
             days.push(
                 <div
                     key={day}
-                    className={`calendar-day ${hasPlan ? 'has-plan' : ''} ${dayStatusClass} ${isDisabled ? 'disabled-day' : ''} ${cloningPlan && !isPast ? 'clone-target' : ''}`}
+                    className={`calendar-day ${hasPlan ? 'has-plan' : ''} ${dayStatusClass} ${isDisabled ? 'disabled-day' : ''} ${cloningPlan && !isPast && !hasPlan ? 'clone-target' : ''}`}
                     onClick={() => !isDisabled && handleDayClick(day)}
                 >
                     <span className="day-number">{day}</span>
