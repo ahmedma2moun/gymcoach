@@ -11,7 +11,8 @@ const planSchema = new mongoose.Schema({
         sets: String,
         reps: String,
         videoUrl: String,
-        done: { type: Boolean, default: false }
+        done: { type: Boolean, default: false },
+        weight: { type: String, default: '' }
     }]
 });
 

@@ -477,7 +477,11 @@ const AdminDashboard = () => {
                                                                 <input type="checkbox" checked={ex.done} readOnly />
                                                                 <div className="ex-details">
                                                                     <span className="ex-name">{ex.name}</span>
-                                                                    <span className="ex-meta">{ex.sets} Sets x {ex.reps} Reps</span>
+                                                                    <span className="ex-meta">
+                                                                        {ex.sets} Sets x {ex.reps} Reps
+                                                                        {ex.weight && ` @ ${ex.weight}`}
+                                                                        {ex.done && !ex.weight && ' (No weight logged)'}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         </div>

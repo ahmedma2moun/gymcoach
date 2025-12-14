@@ -287,6 +287,36 @@
     opacity: 1;
 }
 
+/* Weight Input and Display */
+.weight-input {
+    padding: 0.5rem 0.75rem;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-main);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    width: 120px;
+    transition: var(--transition);
+}
+
+.weight-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: rgba(15, 23, 42, 0.8);
+}
+
+.weight-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.previous-weight {
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-style: italic;
+    margin-top: 0.25rem;
+}
+
 .exercise-wrapper {
     background: rgba(15, 23, 42, 0.4);
     margin-bottom: 0.5rem;

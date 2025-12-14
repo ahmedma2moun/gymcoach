@@ -7,6 +7,8 @@ const UserDashboard = () => {
     const [plans, setPlans] = useState([]);
     const [openVideoIndex, setOpenVideoIndex] = useState(null);
     const [expandedPlans, setExpandedPlans] = useState({});
+    const [exerciseWeights, setExerciseWeights] = useState({});
+    const [previousWeights, setPreviousWeights] = useState({});
 
     useEffect(() => {
         if (user) {
@@ -18,18 +20,59 @@ const UserDashboard = () => {
         const res = await fetch(`/api/plans/${user.id}`);
         const data = await res.json();
         setPlans(data);
+
+        // Fetch previous weights for all exercises in the plans
+        const weights = {};
+        for (const plan of data) {
+            for (const exercise of plan.exercises) {
+                if (!exercise.done && !weights[exercise.name]) {
+                    const prevWeight = await fetchPreviousWeight(exercise.name);
+                    if (prevWeight) {
+                        weights[exercise.name] = prevWeight;
+                    }
+                }
+            }
+        }
+        setPreviousWeights(weights);
+    };
+
+    const fetchPreviousWeight = async (exerciseName) => {
+        try {
+            const res = await fetch(`/api/plans/user/${user.id}/exercise-history/${encodeURIComponent(exerciseName)}`);
+            const data = await res.json();
+            return data.weight;
+        } catch (e) {
+            return null;
+        }
     };
 
     const toggleExercise = async (planId, exerciseIndex, currentStatus) => {
+        const key = `${planId}-${exerciseIndex}`;
+        const weight = exerciseWeights[key] || '';
+
         const res = await fetch(`/api/plans/${planId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ exerciseIndex, done: !currentStatus })
+            body: JSON.stringify({ exerciseIndex, done: !currentStatus, weight })
         });
 
         if (res.ok) {
             fetchPlans();
+            // Clear the weight input after marking as done
+            setExerciseWeights(prev => {
+                const newWeights = { ...prev };
+                delete newWeights[key];
+                return newWeights;
+            });
         }
+    };
+
+    const handleWeightChange = (planId, exerciseIndex, value) => {
+        const key = `${planId}-${exerciseIndex}`;
+        setExerciseWeights(prev => ({
+            ...prev,
+            [key]: value
+        }));
     };
 
     const getEmbedUrl = (url) => {
@@ -105,8 +148,27 @@ const UserDashboard = () => {
                                                         />
                                                         <div className="ex-details">
                                                             <span className="ex-name">{ex.name}</span>
-                                                            <span className="ex-meta">{ex.sets} Sets x {ex.reps} Reps</span>
+                                                            <span className="ex-meta">
+                                                                {ex.sets} Sets x {ex.reps} Reps
+                                                                {ex.done && ex.weight && ` @ ${ex.weight}`}
+                                                            </span>
+                                                            {!ex.done && previousWeights[ex.name] && (
+                                                                <span className="previous-weight">Last used: {previousWeights[ex.name]}</span>
+                                                            )}
                                                         </div>
+                                                        {!ex.done && (
+                                                            <input
+                                                                type="text"
+                                                                className="weight-input"
+                                                                placeholder="Weight (e.g., 50kg)"
+                                                                value={exerciseWeights[`${plan.id}-${idx}`] || ''}
+                                                                onChange={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleWeightChange(plan.id, idx, e.target.value);
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            />
+                                                        )}
                                                         {embedUrl && (
                                                             <button
                                                                 className="btn-video"
