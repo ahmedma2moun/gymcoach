@@ -11,6 +11,8 @@ const UserDashboard = () => {
     const [exerciseWeightsLbs, setExerciseWeightsLbs] = useState({}); // Stores in lbs for display
     const [previousWeights, setPreviousWeights] = useState({});
 
+    const [activeTab, setActiveTab] = useState('unfinished');
+
     useEffect(() => {
         if (user) {
             fetchPlans();
@@ -129,6 +131,17 @@ const UserDashboard = () => {
         }));
     };
 
+    // Derived state for tabs
+    const unfinishedPlans = plans
+        .filter(p => !p.exercises.every(ex => ex.done))
+        .sort((a, b) => new Date(a.date) - new Date(b.date)); // Ascending (oldest first)
+
+    const completedPlans = plans
+        .filter(p => p.exercises.length > 0 && p.exercises.every(ex => ex.done))
+        .sort((a, b) => new Date(b.date) - new Date(a.date)); // Descending (newest first)
+
+    const displayedPlans = activeTab === 'unfinished' ? unfinishedPlans : completedPlans;
+
     return (
         <div className="dashboard">
             <header className="dash-header">
@@ -136,11 +149,26 @@ const UserDashboard = () => {
                 <button onClick={logout} className="btn btn-outline">Logout</button>
             </header>
 
+            <div className="admin-tabs" style={{ marginBottom: '2rem' }}>
+                <button
+                    className={`tab-btn ${activeTab === 'unfinished' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('unfinished')}
+                >
+                    Unfinished Plans
+                </button>
+                <button
+                    className={`tab-btn ${activeTab === 'completed' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('completed')}
+                >
+                    Completed Plans
+                </button>
+            </div>
+
             <div className="plans-container">
-                {plans.length === 0 ? (
-                    <p>No training plans assigned yet.</p>
+                {displayedPlans.length === 0 ? (
+                    <p>No {activeTab} training plans found.</p>
                 ) : (
-                    plans.map((plan, pIdx) => {
+                    displayedPlans.map((plan, pIdx) => {
                         const isCompleted = plan.exercises.length > 0 && plan.exercises.every(ex => ex.done);
 
                         let isCollapsed;
