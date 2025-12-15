@@ -7,7 +7,7 @@ const connectDB = async () => {
     try {
 
 
-        const uri = "mongodb+srv://ahmedfcisasu:MM5ty1Da2XTj9GJ7@cluster0.bdhlsff.mongodb.net/?appName=Cluster0";
+        const uri = process.env.MONGO_URI;
 
         if (!uri) throw new Error('MONGO_URI is not defined');
 
