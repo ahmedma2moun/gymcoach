@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import bcrypt from 'bcryptjs';
 import './Login.css'; // We'll re-use basic styles or create this
 
 const Login = () => {
@@ -14,13 +13,10 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            // Hash password on client side as requested
-            const hashedPassword = await bcrypt.hash(password, 10);
-
             const response = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password: hashedPassword }),
+                body: JSON.stringify({ username, password }),
             });
 
             if (response.ok) {
