@@ -297,9 +297,9 @@
 
 .preview-item>div span {
     display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-word;
+    /* Allow wrapping */
+    line-height: 1.2;
 }
 
 .preview-item input[type="checkbox"] {
