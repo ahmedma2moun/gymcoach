@@ -140,11 +140,9 @@ app.delete('/api/plans/:planId', async (req, res) => {
 // Mark exercise as done/undone
 app.patch('/api/plans/:planId', async (req, res) => {
     await connectDB();
-    const { exerciseIndex, done, weight } = req.body;
+    const { exerciseIndex, done, weight, weightKg, weightLbs } = req.body;
 
     try {
-        // Mongoose doesn't support array index update easily with finding by ID first
-        // Simple way: retrieve, modify, save
         const plan = await Plan.findOne({ id: req.params.planId });
 
         if (!plan) {
@@ -153,9 +151,10 @@ app.patch('/api/plans/:planId', async (req, res) => {
 
         if (plan.exercises[exerciseIndex]) {
             plan.exercises[exerciseIndex].done = done;
-            if (weight !== undefined) {
-                plan.exercises[exerciseIndex].weight = weight;
-            }
+            if (weight !== undefined) plan.exercises[exerciseIndex].weight = weight;
+            if (weightKg !== undefined) plan.exercises[exerciseIndex].weightKg = weightKg;
+            if (weightLbs !== undefined) plan.exercises[exerciseIndex].weightLbs = weightLbs;
+
             await plan.save();
             res.json(plan);
         } else {
@@ -172,20 +171,26 @@ app.get('/api/plans/user/:userId/exercise-history/:exerciseName', async (req, re
     try {
         const { userId, exerciseName } = req.params;
 
-        // Find all plans for this user, sorted by date descending
         const plans = await Plan.find({ userId }).sort({ date: -1 });
 
-        // Search through plans to find the most recent completed instance of this exercise with a weight
         for (const plan of plans) {
             for (const exercise of plan.exercises) {
-                if (exercise.name === exerciseName && exercise.done && exercise.weight) {
-                    return res.json({ weight: exercise.weight });
+                // Check if done. Prefer weightKg/Lbs if available, fallback to legacy weight
+                if (exercise.name === exerciseName && exercise.done) {
+                    if (exercise.weightKg || exercise.weightLbs) {
+                        return res.json({
+                            weightKg: exercise.weightKg,
+                            weightLbs: exercise.weightLbs
+                        });
+                    }
+                    if (exercise.weight) {
+                        return res.json({ weight: exercise.weight });
+                    }
                 }
             }
         }
 
-        // No previous weight found
-        res.json({ weight: null });
+        res.json({ weight: null, weightKg: null, weightLbs: null });
     } catch (e) {
         res.status(500).json({ message: 'Error fetching exercise history' });
     }

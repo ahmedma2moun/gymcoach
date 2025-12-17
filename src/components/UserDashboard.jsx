@@ -21,6 +21,97 @@ const UserDashboard = () => {
         }
     }, [user]);
 
+    const formatWeightDisplay = (kg, lbs) => {
+        if (kg && lbs) return `${kg} kg / ${lbs} lbs`;
+        if (kg) {
+            const calcLbs = (parseFloat(kg) * 2.20462).toFixed(1);
+            return `${kg} kg / ${calcLbs} lbs`;
+        }
+        if (lbs) {
+            const calcKg = (parseFloat(lbs) * 0.453592).toFixed(1);
+            return `${calcKg} kg / ${lbs} lbs`;
+        }
+        return '';
+    };
+
+    const toggleExercise = async (planId, exerciseIndex, currentStatus) => {
+        const key = `${planId}-${exerciseIndex}`;
+
+        let weightKg = '';
+        let weightLbs = '';
+        let legacyWeight = ''; // For backward compatibility if needed, though we prefer new fields
+
+        if (!currentStatus) {
+            weightKg = exerciseWeights[key] || '';
+            weightLbs = exerciseWeightsLbs[key] || '';
+
+            // If one is missing, calculate it for completeness in DB
+            if (weightKg && !weightLbs) {
+                weightLbs = (parseFloat(weightKg) * 2.20462).toFixed(1);
+            } else if (weightLbs && !weightKg) {
+                weightKg = (parseFloat(weightLbs) * 0.453592).toFixed(1);
+            }
+
+            // Still send legacy formatted string just in case
+            legacyWeight = `${weightKg} kg / ${weightLbs} lbs`;
+        }
+
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/plans/${planId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    exerciseIndex,
+                    done: !currentStatus,
+                    weight: legacyWeight,
+                    weightKg,
+                    weightLbs
+                })
+            });
+
+            if (res.ok) {
+                await fetchPlans();
+                setExerciseWeights(prev => { const n = { ...prev }; delete n[key]; return n; });
+                setExerciseWeightsLbs(prev => { const n = { ...prev }; delete n[key]; return n; });
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fetchPreviousWeight = async (exerciseName) => {
+        try {
+            const res = await fetch(`/api/plans/user/${user.id}/exercise-history/${encodeURIComponent(exerciseName)}`);
+            const data = await res.json();
+            // Handle new structure or fallback
+            if (data.weightKg || data.weightLbs) {
+                return { kg: data.weightKg, lbs: data.weightLbs };
+            }
+            if (data.weight) {
+                // Parse legacy
+                const val = parseFloat(data.weight);
+                if (!isNaN(val)) return { kg: data.weight, lbs: (val * 2.20462).toFixed(1) };
+                return { raw: data.weight }; // Fallback for weird strings
+            }
+            return null;
+        } catch (e) {
+            return null;
+        }
+    };
+    // ... (rest of functions like handleWeightChange kept the same from previous step, logic holds) ... 
+
+    // We need to verify where fetchPreviousWeight usage is and update it.
+    // In fetchPlans (Line 36), it expects a return value.
+    // In render (Line 317), it expects 'previousWeights[ex.name]' to be consumable.
+
+    /* 
+       NOTE: We need to update fetchPlans to handle the object return from fetchPreviousWeight.
+       I will inject the updated fetchPlans here as well to be safe.
+    */
+
     const fetchPlans = async () => {
         setIsLoading(true);
         try {
@@ -28,14 +119,13 @@ const UserDashboard = () => {
             const data = await res.json();
             setPlans(data);
 
-            // Fetch previous weights for all exercises in the plans
             const weights = {};
             for (const plan of data) {
                 for (const exercise of plan.exercises) {
                     if (!exercise.done && !weights[exercise.name]) {
-                        const prevWeight = await fetchPreviousWeight(exercise.name);
-                        if (prevWeight) {
-                            weights[exercise.name] = prevWeight;
+                        const prev = await fetchPreviousWeight(exercise.name);
+                        if (prev) {
+                            weights[exercise.name] = prev;
                         }
                     }
                 }
@@ -48,60 +138,6 @@ const UserDashboard = () => {
         }
     };
 
-    // ... (fetchPreviousWeight, toggleExercise, handleWeightChange, getEmbedUrl, toggleVideo, toggleExpand, toggleExercise, handleWeightChange kept as is - not replacing them here to keep interaction small)
-
-    const fetchPreviousWeight = async (exerciseName) => {
-        try {
-            const res = await fetch(`/api/plans/user/${user.id}/exercise-history/${encodeURIComponent(exerciseName)}`);
-            const data = await res.json();
-            return data.weight;
-        } catch (e) {
-            return null;
-        }
-    };
-
-    // ... rest of functions ...
-
-    // Re-inserting helper functions to ensure context matching if I needed to replace a larger block, but simpler to just replace fetchPlans and state init if possible. 
-    // However, since I need to render the loader, I should replace the render block too.
-
-    // Let's replace the top part first to add state.
-
-
-
-    const toggleExercise = async (planId, exerciseIndex, currentStatus) => {
-        const key = `${planId}-${exerciseIndex}`;
-        let weight = exerciseWeights[key] || '';
-        if (weight) weight = `${weight} kg`;
-
-        setIsLoading(true);
-        try {
-            const res = await fetch(`/api/plans/${planId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ exerciseIndex, done: !currentStatus, weight })
-            });
-
-            if (res.ok) {
-                await fetchPlans();
-                // Clear the weight inputs after marking as done
-                setExerciseWeights(prev => {
-                    const newWeights = { ...prev };
-                    delete newWeights[key];
-                    return newWeights;
-                });
-                setExerciseWeightsLbs(prev => {
-                    const newWeights = { ...prev };
-                    delete newWeights[key];
-                    return newWeights;
-                });
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const handleWeightChange = (planId, exerciseIndex, value, unit) => {
         const key = `${planId}-${exerciseIndex}`;
@@ -311,10 +347,17 @@ const UserDashboard = () => {
                                                                     <span className="ex-name">{ex.name}</span>
                                                                     <span className="ex-meta">
                                                                         {ex.sets} Sets x {ex.reps} Reps
-                                                                        {ex.done && ex.weight && ` @ ${ex.weight}`}
+                                                                        {ex.done && (ex.weightKg || ex.weightLbs) && ` @ ${formatWeightDisplay(ex.weightKg, ex.weightLbs)}`}
+                                                                        {ex.done && !ex.weightKg && !ex.weightLbs && ex.weight && ` @ ${ex.weight}`}
                                                                     </span>
                                                                     {!ex.done && previousWeights[ex.name] && (
-                                                                        <span className="previous-weight">Last used: {previousWeights[ex.name]}</span>
+                                                                        <span className="previous-weight">
+                                                                            Last used: {
+                                                                                previousWeights[ex.name].kg || previousWeights[ex.name].lbs
+                                                                                    ? formatWeightDisplay(previousWeights[ex.name].kg, previousWeights[ex.name].lbs)
+                                                                                    : previousWeights[ex.name].raw || ''
+                                                                            }
+                                                                        </span>
                                                                     )}
                                                                 </div>
                                                                 {!ex.done && (
