@@ -14,7 +14,9 @@ const planSchema = new mongoose.Schema({
         done: { type: Boolean, default: false },
         weight: { type: String, default: '' }, // Legacy field
         weightKg: { type: String, default: '' },
-        weightLbs: { type: String, default: '' }
+        weightLbs: { type: String, default: '' },
+        coachNote: { type: String, default: '' },
+        userNote: { type: String, default: '' }
     }]
 });
 

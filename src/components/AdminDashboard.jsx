@@ -9,7 +9,7 @@ const AdminDashboard = () => {
     const [newUser, setNewUser] = useState({ username: '', password: '' });
     const [selectedUser, setSelectedUser] = useState(null);
     const [planForm, setPlanForm] = useState({ id: null, title: '', date: '', exercises: [] }); // Renamed from newPlan to planForm for clarity
-    const [exerciseInput, setExerciseInput] = useState({ exerciseId: '', sets: '', reps: '' });
+    const [exerciseInput, setExerciseInput] = useState({ exerciseId: '', sets: '', reps: '', coachNote: '' });
     const [cloningPlan, setCloningPlan] = useState(null);
 
     // Exercise library state
@@ -84,10 +84,11 @@ const AdminDashboard = () => {
                 videoUrl: selectedExercise.videoUrl,
                 sets: exerciseInput.sets,
                 reps: exerciseInput.reps,
+                coachNote: exerciseInput.coachNote,
                 done: false
             }]
         });
-        setExerciseInput({ exerciseId: '', sets: '', reps: '' });
+        setExerciseInput({ exerciseId: '', sets: '', reps: '', coachNote: '' });
     };
 
     const removeExerciseFromPlan = (indexToRemove) => {
@@ -273,6 +274,7 @@ const AdminDashboard = () => {
                     videoUrl: ex.videoUrl,
                     sets: ex.sets,
                     reps: ex.reps,
+                    coachNote: ex.coachNote,
                     done: false
                 }))
             };
@@ -723,13 +725,23 @@ const AdminDashboard = () => {
                                                         value={exerciseInput.reps}
                                                         onChange={e => setExerciseInput({ ...exerciseInput, reps: e.target.value })}
                                                     />
+                                                    <input
+                                                        placeholder="Coach Note (optional)"
+                                                        value={exerciseInput.coachNote}
+                                                        onChange={e => setExerciseInput({ ...exerciseInput, coachNote: e.target.value })}
+                                                        className="full-width"
+                                                        style={{ gridColumn: '1 / -1', marginTop: '5px' }}
+                                                    />
                                                     <button type="button" onClick={addExerciseToPlan} className="btn-small">+</button>
                                                 </div>
 
                                                 <ul className="plan-preview">
                                                     {planForm.exercises.map((ex, i) => (
                                                         <li key={i} className="preview-item">
-                                                            <span>{ex.name} - {ex.sets}x{ex.reps}</span>
+                                                            <div>
+                                                                <span>{ex.name} - {ex.sets}x{ex.reps}</span>
+                                                                {ex.coachNote && <div className="preview-note">Note: {ex.coachNote}</div>}
+                                                            </div>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => removeExerciseFromPlan(i)}

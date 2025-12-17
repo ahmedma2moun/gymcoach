@@ -116,7 +116,11 @@ app.post('/api/plans', async (req, res) => {
             title,
             date,
             status: 'active',
-            exercises: exercises.map(ex => ({ ...ex, done: false }))
+            exercises: exercises.map(ex => ({
+                ...ex,
+                done: false,
+                coachNote: ex.coachNote || ''
+            }))
         });
         res.json(newPlan);
     } catch (e) {
@@ -140,7 +144,7 @@ app.delete('/api/plans/:planId', async (req, res) => {
 // Mark exercise as done/undone
 app.patch('/api/plans/:planId', async (req, res) => {
     await connectDB();
-    const { exerciseIndex, done, weight, weightKg, weightLbs } = req.body;
+    const { exerciseIndex, done, weight, weightKg, weightLbs, userNote } = req.body;
 
     try {
         const plan = await Plan.findOne({ id: req.params.planId });
@@ -154,6 +158,7 @@ app.patch('/api/plans/:planId', async (req, res) => {
             if (weight !== undefined) plan.exercises[exerciseIndex].weight = weight;
             if (weightKg !== undefined) plan.exercises[exerciseIndex].weightKg = weightKg;
             if (weightLbs !== undefined) plan.exercises[exerciseIndex].weightLbs = weightLbs;
+            if (userNote !== undefined) plan.exercises[exerciseIndex].userNote = userNote;
 
             await plan.save();
             res.json(plan);
@@ -165,7 +170,7 @@ app.patch('/api/plans/:planId', async (req, res) => {
     }
 });
 
-// Get previous weight for an exercise
+// Get previous weight and comment for an exercise
 app.get('/api/plans/user/:userId/exercise-history/:exerciseName', async (req, res) => {
     await connectDB();
     try {
@@ -177,20 +182,25 @@ app.get('/api/plans/user/:userId/exercise-history/:exerciseName', async (req, re
             for (const exercise of plan.exercises) {
                 // Check if done. Prefer weightKg/Lbs if available, fallback to legacy weight
                 if (exercise.name === exerciseName && exercise.done) {
+                    const result = { weight: null, weightKg: null, weightLbs: null, lastComment: exercise.userNote || '' };
+
                     if (exercise.weightKg || exercise.weightLbs) {
-                        return res.json({
-                            weightKg: exercise.weightKg,
-                            weightLbs: exercise.weightLbs
-                        });
+                        result.weightKg = exercise.weightKg;
+                        result.weightLbs = exercise.weightLbs;
+                        return res.json(result);
                     }
                     if (exercise.weight) {
-                        return res.json({ weight: exercise.weight });
+                        result.weight = exercise.weight;
+                        return res.json(result);
                     }
+                    // If no weight but has note, we might want to keep looking for weight? 
+                    // Or just return what we have? Let's return the most recent done instance regardless.
+                    return res.json(result);
                 }
             }
         }
 
-        res.json({ weight: null, weightKg: null, weightLbs: null });
+        res.json({ weight: null, weightKg: null, weightLbs: null, lastComment: '' });
     } catch (e) {
         res.status(500).json({ message: 'Error fetching exercise history' });
     }

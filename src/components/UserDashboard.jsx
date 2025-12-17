@@ -9,6 +9,7 @@ const UserDashboard = () => {
     const [expandedPlans, setExpandedPlans] = useState({});
     const [exerciseWeights, setExerciseWeights] = useState({}); // Stores in kg
     const [exerciseWeightsLbs, setExerciseWeightsLbs] = useState({}); // Stores in lbs for display
+    const [userNotes, setUserNotes] = useState({}); // Temporary state for notes before save
     const [previousWeights, setPreviousWeights] = useState({});
 
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -34,25 +35,34 @@ const UserDashboard = () => {
         return '';
     };
 
-    const toggleExercise = async (planId, exerciseIndex, currentStatus) => {
+    const toggleExercise = async (planId, exerciseIndex, currentStatus, userNoteValue = null) => {
         const key = `${planId}-${exerciseIndex}`;
+
+        // If toggling status, use state. If saving note only, use passed value or state.
+        // Actually, let's keep it simple: We always send current state or what's in DB? 
+        // Better: When toggling done, we send everything.
 
         let weightKg = '';
         let weightLbs = '';
-        let legacyWeight = ''; // For backward compatibility if needed, though we prefer new fields
+        let legacyWeight = '';
+
+        // Get values from state or if not in state (already saved), we might need them?
+        // Current logic relies on state for edits. If strict, we should populate state on load?
+        // For now, assume state has current edit.
+
+        // userNote state logic? We need state for user notes too.
+        // Let's assume we add `userNotes` state map.
+        const note = userNotes[key] || '';
 
         if (!currentStatus) {
             weightKg = exerciseWeights[key] || '';
             weightLbs = exerciseWeightsLbs[key] || '';
 
-            // If one is missing, calculate it for completeness in DB
             if (weightKg && !weightLbs) {
                 weightLbs = (parseFloat(weightKg) * 2.20462).toFixed(1);
             } else if (weightLbs && !weightKg) {
                 weightKg = (parseFloat(weightLbs) * 0.453592).toFixed(1);
             }
-
-            // Still send legacy formatted string just in case
             legacyWeight = `${weightKg} kg / ${weightLbs} lbs`;
         }
 
@@ -66,14 +76,20 @@ const UserDashboard = () => {
                     done: !currentStatus,
                     weight: legacyWeight,
                     weightKg,
-                    weightLbs
+                    weightLbs,
+                    userNote: note
                 })
             });
 
             if (res.ok) {
                 await fetchPlans();
+                // Clear weights from state if marked done? logic was to clear.
+                // Keep note? Maybe clear note state too as it is saved.
                 setExerciseWeights(prev => { const n = { ...prev }; delete n[key]; return n; });
                 setExerciseWeightsLbs(prev => { const n = { ...prev }; delete n[key]; return n; });
+                // setUserNotes(prev => { const n = {...prev}; delete n[key]; return n; }); // Allow keeping it visible?
+                // Actually, if we clear state, the input might empty unless we render from plan data.
+                // The plan data refreshes, so we should rely on plan.userNote if state is empty.
             }
         } catch (error) {
             console.error(error);
@@ -86,16 +102,26 @@ const UserDashboard = () => {
         try {
             const res = await fetch(`/api/plans/user/${user.id}/exercise-history/${encodeURIComponent(exerciseName)}`);
             const data = await res.json();
-            // Handle new structure or fallback
+            // Data structure: { weight, weightKg, weightLbs, lastComment }
+            const result = { lastComment: data.lastComment };
+
             if (data.weightKg || data.weightLbs) {
-                return { kg: data.weightKg, lbs: data.weightLbs };
+                result.kg = data.weightKg;
+                result.lbs = data.weightLbs;
+                return result;
             }
             if (data.weight) {
-                // Parse legacy
                 const val = parseFloat(data.weight);
-                if (!isNaN(val)) return { kg: data.weight, lbs: (val * 2.20462).toFixed(1) };
-                return { raw: data.weight }; // Fallback for weird strings
+                if (!isNaN(val)) {
+                    result.kg = data.weight;
+                    result.lbs = (val * 2.20462).toFixed(1);
+                    return result;
+                }
+                result.raw = data.weight;
+                return result;
             }
+            // Return at least the comment if exists, or null if absolutely nothing
+            if (result.lastComment) return result;
             return null;
         } catch (e) {
             return null;
@@ -334,78 +360,96 @@ const UserDashboard = () => {
 
                                                     return (
                                                         <div key={idx} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
-                                                            <div className="exercise-item">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={ex.done}
-                                                                    onChange={(e) => {
-                                                                        e.stopPropagation();
-                                                                        toggleExercise(plan.id, idx, ex.done);
-                                                                    }}
-                                                                />
-                                                                <div className="ex-details">
-                                                                    <span className="ex-name">{ex.name}</span>
-                                                                    <span className="ex-meta">
-                                                                        {ex.sets} Sets x {ex.reps} Reps
-                                                                        {ex.done && (ex.weightKg || ex.weightLbs) && ` @ ${formatWeightDisplay(ex.weightKg, ex.weightLbs)}`}
-                                                                        {ex.done && !ex.weightKg && !ex.weightLbs && ex.weight && ` @ ${ex.weight}`}
-                                                                    </span>
-                                                                    {!ex.done && previousWeights[ex.name] && (
-                                                                        <span className="previous-weight">
-                                                                            Last used: {
-                                                                                previousWeights[ex.name].kg || previousWeights[ex.name].lbs
-                                                                                    ? formatWeightDisplay(previousWeights[ex.name].kg, previousWeights[ex.name].lbs)
-                                                                                    : previousWeights[ex.name].raw || ''
-                                                                            }
+                                                            <div className="exercise-item-group">
+                                                                <div className="exercise-item">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={ex.done}
+                                                                        onChange={(e) => {
+                                                                            e.stopPropagation();
+                                                                            toggleExercise(plan.id, idx, ex.done);
+                                                                        }}
+                                                                    />
+                                                                    <div className="ex-details">
+                                                                        <span className="ex-name">{ex.name}</span>
+                                                                        <span className="ex-meta">
+                                                                            {ex.sets} Sets x {ex.reps} Reps
+                                                                            {ex.done && (ex.weightKg || ex.weightLbs) && ` @ ${formatWeightDisplay(ex.weightKg, ex.weightLbs)}`}
+                                                                            {ex.done && !ex.weightKg && !ex.weightLbs && ex.weight && ` @ ${ex.weight}`}
                                                                         </span>
+                                                                        {ex.coachNote && <span className="coach-note">Note: {ex.coachNote}</span>}
+                                                                        {!ex.done && previousWeights[ex.name] && (
+                                                                            <div className="previous-data">
+                                                                                <span className="previous-weight">
+                                                                                    Last: {
+                                                                                        previousWeights[ex.name].kg || previousWeights[ex.name].lbs
+                                                                                            ? formatWeightDisplay(previousWeights[ex.name].kg, previousWeights[ex.name].lbs)
+                                                                                            : previousWeights[ex.name].raw || 'No weight'
+                                                                                    }
+                                                                                </span>
+                                                                                {previousWeights[ex.name].lastComment && (
+                                                                                    <span className="last-comment">"{previousWeights[ex.name].lastComment}"</span>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    {!ex.done && (
+                                                                        <div className="weight-inputs-container">
+                                                                            <div className="weight-input-group">
+                                                                                <input
+                                                                                    type="number"
+                                                                                    className="weight-input"
+                                                                                    placeholder="kg"
+                                                                                    value={exerciseWeights[itemKey] || ''}
+                                                                                    onChange={(e) => handleWeightChange(plan.id, idx, e.target.value, 'kg')}
+                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                    step="0.1"
+                                                                                />
+                                                                                <span className="weight-unit">kg</span>
+                                                                            </div>
+                                                                            <div className="weight-input-group">
+                                                                                <input
+                                                                                    type="number"
+                                                                                    className="weight-input"
+                                                                                    placeholder="lbs"
+                                                                                    value={exerciseWeightsLbs[itemKey] || ''}
+                                                                                    onChange={(e) => handleWeightChange(plan.id, idx, e.target.value, 'lbs')}
+                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                    step="0.1"
+                                                                                />
+                                                                                <span className="weight-unit">lbs</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {embedUrl && (
+                                                                        <button
+                                                                            className="btn-video"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                toggleVideo(itemKey);
+                                                                            }}
+                                                                        >
+                                                                            {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
+                                                                        </button>
                                                                     )}
                                                                 </div>
-                                                                {!ex.done && (
-                                                                    <div className="weight-inputs-container">
-                                                                        <div className="weight-input-group">
-                                                                            <input
-                                                                                type="number"
-                                                                                className="weight-input"
-                                                                                placeholder="kg"
-                                                                                value={exerciseWeights[itemKey] || ''}
-                                                                                onChange={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    handleWeightChange(plan.id, idx, e.target.value, 'kg');
-                                                                                }}
-                                                                                onClick={(e) => e.stopPropagation()}
-                                                                                step="0.1"
-                                                                            />
-                                                                            <span className="weight-unit">kg</span>
-                                                                        </div>
-                                                                        <div className="weight-input-group">
-                                                                            <input
-                                                                                type="number"
-                                                                                className="weight-input"
-                                                                                placeholder="lbs"
-                                                                                value={exerciseWeightsLbs[itemKey] || ''}
-                                                                                onChange={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    handleWeightChange(plan.id, idx, e.target.value, 'lbs');
-                                                                                }}
-                                                                                onClick={(e) => e.stopPropagation()}
-                                                                                step="0.1"
-                                                                            />
-                                                                            <span className="weight-unit">lbs</span>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                                {embedUrl && (
-                                                                    <button
-                                                                        className="btn-video"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            toggleVideo(itemKey);
-                                                                        }}
-                                                                    >
-                                                                        {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
-                                                                    </button>
-                                                                )}
+
+                                                                {/* User Note Section */}
+                                                                <div className="user-note-section">
+                                                                    {ex.done ? (
+                                                                        ex.userNote && <div className="user-note-display">Your Comment: {ex.userNote}</div>
+                                                                    ) : (
+                                                                        <input
+                                                                            className="user-note-input"
+                                                                            placeholder="Add a comment..."
+                                                                            value={userNotes[itemKey] !== undefined ? userNotes[itemKey] : (ex.userNote || '')}
+                                                                            onChange={(e) => setUserNotes(prev => ({ ...prev, [itemKey]: e.target.value }))}
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                        />
+                                                                    )}
+                                                                </div>
                                                             </div>
+
                                                             {openVideoIndex === itemKey && embedUrl && (
                                                                 <div className="video-container">
                                                                     <iframe
