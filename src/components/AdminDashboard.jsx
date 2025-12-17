@@ -112,15 +112,65 @@ const AdminDashboard = () => {
         if (selectedExercises.length < 2) return;
 
         const supersetId = 'ss-' + Date.now();
-        const updatedExercises = [...planForm.exercises];
+        let currentExercises = [...planForm.exercises];
 
-        selectedExercises.forEach(index => {
-            if (updatedExercises[index]) {
-                updatedExercises[index] = { ...updatedExercises[index], supersetId };
+        // Sort selected indices to find the insertion point (the first occurrence)
+        const sortedIndices = [...selectedExercises].sort((a, b) => a - b);
+        const insertIndex = sortedIndices[0];
+
+        // Extract selected list and unselected list
+        const supersetGroup = [];
+        const remainingExercises = [];
+
+        currentExercises.forEach((ex, idx) => {
+            if (selectedExercises.includes(idx)) {
+                supersetGroup.push({ ...ex, supersetId });
+            } else {
+                remainingExercises.push(ex);
             }
         });
 
-        setPlanForm({ ...planForm, exercises: updatedExercises });
+        // Construct new array: 
+        // 1. Items before the insertion point (which aren't in the superset)
+        // This logic is tricky because indices shift.
+        // Cleaner approach: 
+        // 1. Extract objects.
+        // 2. Remove all selected from the main list.
+        // 3. Insert them back at the position of the first selected item?
+        //    Wait, if I remove items 0 and 2, item 1 slides to 0. It's confusing.
+
+        // Better:
+        // 1. Identify valid objects to move.
+        const exercisesToGroup = sortedIndices.map(idx => currentExercises[idx]);
+
+        // 2. Create the new list without the selected items
+        // const listWithoutSelected = currentExercises.filter((_, idx) => !selectedExercises.includes(idx));
+
+        // 3. Determine insertion index. 
+        // We want to insert at the index of the first item effectively.
+        // But since we removed items *before* it, the index shifts?
+        // No, we want to place the group where the *first component* was.
+        // The `sortedIndices[0]` is the index in the *original* array.
+        // We need to map that to the new array?
+        // Actually, just looping is easier.
+
+        const newExerciseOrder = [];
+        let groupInserted = false;
+
+        for (let i = 0; i < currentExercises.length; i++) {
+            // If this index triggers the group insertion (it's the first one)
+            if (i === insertIndex && !groupInserted) {
+                exercisesToGroup.forEach(ex => newExerciseOrder.push({ ...ex, supersetId }));
+                groupInserted = true;
+            }
+
+            // If this item is NOT in our selection, add it.
+            if (!selectedExercises.includes(i)) {
+                newExerciseOrder.push(currentExercises[i]);
+            }
+        }
+
+        setPlanForm({ ...planForm, exercises: newExerciseOrder });
         setSelectedExercises([]);
     };
 
