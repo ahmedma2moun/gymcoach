@@ -770,40 +770,92 @@ const AdminDashboard = () => {
                                                 </div>
 
                                                 <ul className="plan-preview">
-                                                    {planForm.exercises.map((ex, i) => {
-                                                        const isSelected = selectedExercises.includes(i);
-                                                        const isSuperset = !!ex.supersetId;
+                                                    {(() => {
+                                                        const displayItems = [];
+                                                        let currentSuperset = null;
 
-                                                        // Unique logic to show grouping visually could be complex in a flat list.
-                                                        // For now, identifying color or label.
+                                                        planForm.exercises.forEach((ex, idx) => {
+                                                            if (ex.supersetId) {
+                                                                if (!currentSuperset || currentSuperset.id !== ex.supersetId) {
+                                                                    if (currentSuperset) displayItems.push(currentSuperset);
+                                                                    currentSuperset = { type: 'superset', id: ex.supersetId, items: [] };
+                                                                }
+                                                                currentSuperset.items.push({ ...ex, originalIndex: idx });
+                                                            } else {
+                                                                if (currentSuperset) {
+                                                                    displayItems.push(currentSuperset);
+                                                                    currentSuperset = null;
+                                                                }
+                                                                displayItems.push({ type: 'single', data: { ...ex, originalIndex: idx } });
+                                                            }
+                                                        });
+                                                        if (currentSuperset) displayItems.push(currentSuperset);
 
-                                                        return (
-                                                            <li key={i} className={`preview-item ${isSuperset ? 'superset-item' : ''}`} style={isSuperset ? { borderLeft: '4px solid #00d2ff', paddingLeft: '8px' } : {}}>
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={isSelected}
-                                                                    onChange={() => toggleExerciseSelection(i)}
-                                                                    style={{ marginRight: '10px' }}
-                                                                />
-                                                                <div>
-                                                                    <span>{ex.name} - {ex.sets}x{ex.reps}</span>
-                                                                    {isSuperset && (
-                                                                        <span className="superset-tag" style={{ fontSize: '0.8em', color: '#00d2ff', marginLeft: '5px' }}>
-                                                                            [Superset] <button className="btn-small text-btn" onClick={() => handleUngroupSuperset(ex.supersetId)}>(ungroup)</button>
-                                                                        </span>
-                                                                    )}
-                                                                    {ex.coachNote && <div className="preview-note">Note: {ex.coachNote}</div>}
-                                                                </div>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removeExerciseFromPlan(i)}
-                                                                    className="btn-delete-ex"
-                                                                >
-                                                                    ✕
-                                                                </button>
-                                                            </li>
-                                                        );
-                                                    })}
+                                                        return displayItems.map((item, groupIdx) => {
+                                                            if (item.type === 'superset') {
+                                                                return (
+                                                                    <li key={`group-${groupIdx}`} className="superset-group-container" style={{ border: '2px dashed #00d2ff', borderRadius: '8px', padding: '10px', marginBottom: '10px', position: 'relative', listStyle: 'none' }}>
+                                                                        <div className="superset-label" style={{ position: 'absolute', top: '-10px', left: '10px', background: '#242424', padding: '0 5px', color: '#00d2ff', fontSize: '0.8em', fontWeight: 'bold' }}>
+                                                                            Superset
+                                                                            <button type="button" className="btn-small text-btn" onClick={() => handleUngroupSuperset(item.id)} style={{ marginLeft: '10px', color: '#ff4d4d' }}>(ungroup)</button>
+                                                                        </div>
+                                                                        <ul style={{ padding: 0, marginTop: '5px' }}>
+                                                                            {item.items.map((ex, subIdx) => {
+                                                                                const i = ex.originalIndex;
+                                                                                const isSelected = selectedExercises.includes(i);
+                                                                                return (
+                                                                                    <li key={i} className="preview-item" style={{ marginBottom: subIdx < item.items.length - 1 ? '10px' : '0', borderBottom: subIdx < item.items.length - 1 ? '1px solid #333' : 'none', paddingBottom: subIdx < item.items.length - 1 ? '10px' : '0' }}>
+                                                                                        <input
+                                                                                            type="checkbox"
+                                                                                            checked={isSelected}
+                                                                                            onChange={() => toggleExerciseSelection(i)}
+                                                                                            style={{ marginRight: '10px' }}
+                                                                                        />
+                                                                                        <div>
+                                                                                            <span>{ex.name} - {ex.sets}x{ex.reps}</span>
+                                                                                            {ex.coachNote && <div className="preview-note">Note: {ex.coachNote}</div>}
+                                                                                        </div>
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => removeExerciseFromPlan(i)}
+                                                                                            className="btn-delete-ex"
+                                                                                        >
+                                                                                            ✕
+                                                                                        </button>
+                                                                                    </li>
+                                                                                );
+                                                                            })}
+                                                                        </ul>
+                                                                    </li>
+                                                                );
+                                                            } else {
+                                                                const ex = item.data;
+                                                                const i = ex.originalIndex;
+                                                                const isSelected = selectedExercises.includes(i);
+                                                                return (
+                                                                    <li key={i} className="preview-item">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={isSelected}
+                                                                            onChange={() => toggleExerciseSelection(i)}
+                                                                            style={{ marginRight: '10px' }}
+                                                                        />
+                                                                        <div>
+                                                                            <span>{ex.name} - {ex.sets}x{ex.reps}</span>
+                                                                            {ex.coachNote && <div className="preview-note">Note: {ex.coachNote}</div>}
+                                                                        </div>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => removeExerciseFromPlan(i)}
+                                                                            className="btn-delete-ex"
+                                                                        >
+                                                                            ✕
+                                                                        </button>
+                                                                    </li>
+                                                                );
+                                                            }
+                                                        });
+                                                    })()}
                                                 </ul>
                                             </div>
 
