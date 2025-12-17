@@ -16,7 +16,8 @@ const planSchema = new mongoose.Schema({
         weightKg: { type: String, default: '' },
         weightLbs: { type: String, default: '' },
         coachNote: { type: String, default: '' },
-        userNote: { type: String, default: '' }
+        userNote: { type: String, default: '' },
+        supersetId: { type: String, default: null }
     }]
 });
 

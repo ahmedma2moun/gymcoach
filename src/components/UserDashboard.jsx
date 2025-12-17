@@ -221,6 +221,110 @@ const UserDashboard = () => {
         }
     };
 
+    const renderExerciseItem = (ex, idx, plan, itemKey, embedUrl) => (
+        <div className="exercise-item-group">
+            <div className="exercise-item">
+                <input
+                    type="checkbox"
+                    checked={ex.done}
+                    onChange={(e) => {
+                        e.stopPropagation();
+                        toggleExercise(plan.id, idx, ex.done);
+                    }}
+                />
+                <div className="ex-details">
+                    <span className="ex-name">{ex.name}</span>
+                    <span className="ex-meta">
+                        {ex.sets} Sets x {ex.reps} Reps
+                        {ex.done && (ex.weightKg || ex.weightLbs) && ` @ ${formatWeightDisplay(ex.weightKg, ex.weightLbs)}`}
+                        {ex.done && !ex.weightKg && !ex.weightLbs && ex.weight && ` @ ${ex.weight}`}
+                    </span>
+                    {ex.coachNote && <span className="coach-note">Note: {ex.coachNote}</span>}
+                    {!ex.done && previousWeights[ex.name] && (
+                        <div className="previous-data">
+                            <span className="previous-weight">
+                                Last: {
+                                    previousWeights[ex.name].kg || previousWeights[ex.name].lbs
+                                        ? formatWeightDisplay(previousWeights[ex.name].kg, previousWeights[ex.name].lbs)
+                                        : previousWeights[ex.name].raw || 'No weight'
+                                }
+                            </span>
+                            {previousWeights[ex.name].lastComment && (
+                                <span className="last-comment">"{previousWeights[ex.name].lastComment}"</span>
+                            )}
+                        </div>
+                    )}
+                </div>
+                {!ex.done && (
+                    <div className="weight-inputs-container">
+                        <div className="weight-input-group">
+                            <input
+                                type="number"
+                                className="weight-input"
+                                placeholder="kg"
+                                value={exerciseWeights[itemKey] || ''}
+                                onChange={(e) => handleWeightChange(plan.id, idx, e.target.value, 'kg')}
+                                onClick={(e) => e.stopPropagation()}
+                                step="0.1"
+                            />
+                            <span className="weight-unit">kg</span>
+                        </div>
+                        <div className="weight-input-group">
+                            <input
+                                type="number"
+                                className="weight-input"
+                                placeholder="lbs"
+                                value={exerciseWeightsLbs[itemKey] || ''}
+                                onChange={(e) => handleWeightChange(plan.id, idx, e.target.value, 'lbs')}
+                                onClick={(e) => e.stopPropagation()}
+                                step="0.1"
+                            />
+                            <span className="weight-unit">lbs</span>
+                        </div>
+                    </div>
+                )}
+                {embedUrl && (
+                    <button
+                        className="btn-video"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleVideo(itemKey);
+                        }}
+                    >
+                        {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
+                    </button>
+                )}
+            </div>
+
+            {/* User Note Section */}
+            <div className="user-note-section">
+                {ex.done ? (
+                    ex.userNote && <div className="user-note-display">Your Comment: {ex.userNote}</div>
+                ) : (
+                    <input
+                        className="user-note-input"
+                        placeholder="Add a comment..."
+                        value={userNotes[itemKey] !== undefined ? userNotes[itemKey] : (ex.userNote || '')}
+                        onChange={(e) => setUserNotes(prev => ({ ...prev, [itemKey]: e.target.value }))}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                )}
+            </div>
+
+            {openVideoIndex === itemKey && embedUrl && (
+                <div className="video-container">
+                    <iframe
+                        src={embedUrl}
+                        title={ex.name}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                    ></iframe>
+                </div>
+            )}
+        </div>
+    );
+
     const renderCalendar = () => {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
@@ -354,116 +458,58 @@ const UserDashboard = () => {
 
                                         {!isCollapsed && (
                                             <div className="exercise-list">
-                                                {plan.exercises.map((ex, idx) => {
-                                                    const itemKey = `${plan.id}-${idx}`;
-                                                    const embedUrl = getEmbedUrl(ex.videoUrl);
+                                                {(() => {
+                                                    // Group exercises for display
+                                                    const displayItems = [];
+                                                    let currentSuperset = null;
 
-                                                    return (
-                                                        <div key={idx} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
-                                                            <div className="exercise-item-group">
-                                                                <div className="exercise-item">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={ex.done}
-                                                                        onChange={(e) => {
-                                                                            e.stopPropagation();
-                                                                            toggleExercise(plan.id, idx, ex.done);
-                                                                        }}
-                                                                    />
-                                                                    <div className="ex-details">
-                                                                        <span className="ex-name">{ex.name}</span>
-                                                                        <span className="ex-meta">
-                                                                            {ex.sets} Sets x {ex.reps} Reps
-                                                                            {ex.done && (ex.weightKg || ex.weightLbs) && ` @ ${formatWeightDisplay(ex.weightKg, ex.weightLbs)}`}
-                                                                            {ex.done && !ex.weightKg && !ex.weightLbs && ex.weight && ` @ ${ex.weight}`}
-                                                                        </span>
-                                                                        {ex.coachNote && <span className="coach-note">Note: {ex.coachNote}</span>}
-                                                                        {!ex.done && previousWeights[ex.name] && (
-                                                                            <div className="previous-data">
-                                                                                <span className="previous-weight">
-                                                                                    Last: {
-                                                                                        previousWeights[ex.name].kg || previousWeights[ex.name].lbs
-                                                                                            ? formatWeightDisplay(previousWeights[ex.name].kg, previousWeights[ex.name].lbs)
-                                                                                            : previousWeights[ex.name].raw || 'No weight'
-                                                                                    }
-                                                                                </span>
-                                                                                {previousWeights[ex.name].lastComment && (
-                                                                                    <span className="last-comment">"{previousWeights[ex.name].lastComment}"</span>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                    {!ex.done && (
-                                                                        <div className="weight-inputs-container">
-                                                                            <div className="weight-input-group">
-                                                                                <input
-                                                                                    type="number"
-                                                                                    className="weight-input"
-                                                                                    placeholder="kg"
-                                                                                    value={exerciseWeights[itemKey] || ''}
-                                                                                    onChange={(e) => handleWeightChange(plan.id, idx, e.target.value, 'kg')}
-                                                                                    onClick={(e) => e.stopPropagation()}
-                                                                                    step="0.1"
-                                                                                />
-                                                                                <span className="weight-unit">kg</span>
-                                                                            </div>
-                                                                            <div className="weight-input-group">
-                                                                                <input
-                                                                                    type="number"
-                                                                                    className="weight-input"
-                                                                                    placeholder="lbs"
-                                                                                    value={exerciseWeightsLbs[itemKey] || ''}
-                                                                                    onChange={(e) => handleWeightChange(plan.id, idx, e.target.value, 'lbs')}
-                                                                                    onClick={(e) => e.stopPropagation()}
-                                                                                    step="0.1"
-                                                                                />
-                                                                                <span className="weight-unit">lbs</span>
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                    {embedUrl && (
-                                                                        <button
-                                                                            className="btn-video"
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                toggleVideo(itemKey);
-                                                                            }}
-                                                                        >
-                                                                            {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
-                                                                        </button>
-                                                                    )}
-                                                                </div>
+                                                    plan.exercises.forEach((ex, idx) => {
+                                                        if (ex.supersetId) {
+                                                            if (!currentSuperset || currentSuperset.id !== ex.supersetId) {
+                                                                if (currentSuperset) displayItems.push(currentSuperset);
+                                                                currentSuperset = { type: 'superset', id: ex.supersetId, items: [] };
+                                                            }
+                                                            currentSuperset.items.push({ ...ex, originalIndex: idx });
+                                                        } else {
+                                                            if (currentSuperset) {
+                                                                displayItems.push(currentSuperset);
+                                                                currentSuperset = null;
+                                                            }
+                                                            displayItems.push({ type: 'single', data: { ...ex, originalIndex: idx } });
+                                                        }
+                                                    });
+                                                    if (currentSuperset) displayItems.push(currentSuperset);
 
-                                                                {/* User Note Section */}
-                                                                <div className="user-note-section">
-                                                                    {ex.done ? (
-                                                                        ex.userNote && <div className="user-note-display">Your Comment: {ex.userNote}</div>
-                                                                    ) : (
-                                                                        <input
-                                                                            className="user-note-input"
-                                                                            placeholder="Add a comment..."
-                                                                            value={userNotes[itemKey] !== undefined ? userNotes[itemKey] : (ex.userNote || '')}
-                                                                            onChange={(e) => setUserNotes(prev => ({ ...prev, [itemKey]: e.target.value }))}
-                                                                            onClick={(e) => e.stopPropagation()}
-                                                                        />
-                                                                    )}
+                                                    return displayItems.map((item, itemIdx) => {
+                                                        if (item.type === 'superset') {
+                                                            return (
+                                                                <div key={`superset-${itemIdx}`} className="superset-container" style={{ border: '2px dashed #00d2ff', borderRadius: '8px', padding: '10px', marginBottom: '15px', position: 'relative' }}>
+                                                                    <div className="superset-label" style={{ position: 'absolute', top: '-12px', left: '20px', background: '#1a1a1a', padding: '0 10px', color: '#00d2ff', fontSize: '0.9em', fontWeight: 'bold' }}>Superset</div>
+                                                                    {item.items.map((ex, subIdx) => {
+                                                                        const globalIdx = ex.originalIndex;
+                                                                        const itemKey = `${plan.id}-${globalIdx}`;
+                                                                        const embedUrl = getEmbedUrl(ex.videoUrl);
+                                                                        return (
+                                                                            <div key={globalIdx} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`} style={subIdx < item.items.length - 1 ? { marginBottom: '15px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '15px' } : {}}>
+                                                                                {renderExerciseItem(ex, globalIdx, plan, itemKey, embedUrl)}
+                                                                            </div>
+                                                                        );
+                                                                    })}
                                                                 </div>
-                                                            </div>
-
-                                                            {openVideoIndex === itemKey && embedUrl && (
-                                                                <div className="video-container">
-                                                                    <iframe
-                                                                        src={embedUrl}
-                                                                        title={ex.name}
-                                                                        frameBorder="0"
-                                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                                        allowFullScreen
-                                                                    ></iframe>
+                                                            );
+                                                        } else {
+                                                            const ex = item.data;
+                                                            const globalIdx = ex.originalIndex;
+                                                            const itemKey = `${plan.id}-${globalIdx}`;
+                                                            const embedUrl = getEmbedUrl(ex.videoUrl);
+                                                            return (
+                                                                <div key={globalIdx} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
+                                                                    {renderExerciseItem(ex, globalIdx, plan, itemKey, embedUrl)}
                                                                 </div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
+                                                            );
+                                                        }
+                                                    });
+                                                })()}
                                             </div>
                                         )}
                                     </div>

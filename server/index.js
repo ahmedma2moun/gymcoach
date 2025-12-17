@@ -119,7 +119,8 @@ app.post('/api/plans', async (req, res) => {
             exercises: exercises.map(ex => ({
                 ...ex,
                 done: false,
-                coachNote: ex.coachNote || ''
+                coachNote: ex.coachNote || '',
+                supersetId: ex.supersetId || null
             }))
         });
         res.json(newPlan);

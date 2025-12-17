@@ -10,6 +10,7 @@ const AdminDashboard = () => {
     const [selectedUser, setSelectedUser] = useState(null);
     const [planForm, setPlanForm] = useState({ id: null, title: '', date: '', exercises: [] }); // Renamed from newPlan to planForm for clarity
     const [exerciseInput, setExerciseInput] = useState({ exerciseId: '', sets: '', reps: '', coachNote: '' });
+    const [selectedExercises, setSelectedExercises] = useState([]); // Array of indices
     const [cloningPlan, setCloningPlan] = useState(null);
 
     // Exercise library state
@@ -91,11 +92,43 @@ const AdminDashboard = () => {
         setExerciseInput({ exerciseId: '', sets: '', reps: '', coachNote: '' });
     };
 
+
+
     const removeExerciseFromPlan = (indexToRemove) => {
         setPlanForm({
             ...planForm,
             exercises: planForm.exercises.filter((_, index) => index !== indexToRemove)
         });
+        setSelectedExercises(selectedExercises.filter(i => i !== indexToRemove).map(i => i > indexToRemove ? i - 1 : i));
+    };
+
+    const toggleExerciseSelection = (index) => {
+        setSelectedExercises(prev =>
+            prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+        );
+    };
+
+    const handleCreateSuperset = () => {
+        if (selectedExercises.length < 2) return;
+
+        const supersetId = 'ss-' + Date.now();
+        const updatedExercises = [...planForm.exercises];
+
+        selectedExercises.forEach(index => {
+            if (updatedExercises[index]) {
+                updatedExercises[index] = { ...updatedExercises[index], supersetId };
+            }
+        });
+
+        setPlanForm({ ...planForm, exercises: updatedExercises });
+        setSelectedExercises([]);
+    };
+
+    const handleUngroupSuperset = (supersetId) => {
+        const updatedExercises = planForm.exercises.map(ex =>
+            ex.supersetId === supersetId ? { ...ex, supersetId: null } : ex
+        );
+        setPlanForm({ ...planForm, exercises: updatedExercises });
     };
 
     const handleSavePlan = async () => {
@@ -275,6 +308,7 @@ const AdminDashboard = () => {
                     sets: ex.sets,
                     reps: ex.reps,
                     coachNote: ex.coachNote,
+                    supersetId: ex.supersetId,
                     done: false
                 }))
             };
@@ -736,27 +770,53 @@ const AdminDashboard = () => {
                                                 </div>
 
                                                 <ul className="plan-preview">
-                                                    {planForm.exercises.map((ex, i) => (
-                                                        <li key={i} className="preview-item">
-                                                            <div>
-                                                                <span>{ex.name} - {ex.sets}x{ex.reps}</span>
-                                                                {ex.coachNote && <div className="preview-note">Note: {ex.coachNote}</div>}
-                                                            </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removeExerciseFromPlan(i)}
-                                                                className="btn-delete-ex"
-                                                            >
-                                                                ✕
-                                                            </button>
-                                                        </li>
-                                                    ))}
+                                                    {planForm.exercises.map((ex, i) => {
+                                                        const isSelected = selectedExercises.includes(i);
+                                                        const isSuperset = !!ex.supersetId;
+
+                                                        // Unique logic to show grouping visually could be complex in a flat list.
+                                                        // For now, identifying color or label.
+
+                                                        return (
+                                                            <li key={i} className={`preview-item ${isSuperset ? 'superset-item' : ''}`} style={isSuperset ? { borderLeft: '4px solid #00d2ff', paddingLeft: '8px' } : {}}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isSelected}
+                                                                    onChange={() => toggleExerciseSelection(i)}
+                                                                    style={{ marginRight: '10px' }}
+                                                                />
+                                                                <div>
+                                                                    <span>{ex.name} - {ex.sets}x{ex.reps}</span>
+                                                                    {isSuperset && (
+                                                                        <span className="superset-tag" style={{ fontSize: '0.8em', color: '#00d2ff', marginLeft: '5px' }}>
+                                                                            [Superset] <button className="btn-small text-btn" onClick={() => handleUngroupSuperset(ex.supersetId)}>(ungroup)</button>
+                                                                        </span>
+                                                                    )}
+                                                                    {ex.coachNote && <div className="preview-note">Note: {ex.coachNote}</div>}
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeExerciseFromPlan(i)}
+                                                                    className="btn-delete-ex"
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            </li>
+                                                        );
+                                                    })}
                                                 </ul>
                                             </div>
 
                                             <button onClick={handleSavePlan} className="btn btn-primary full-width mt-2">
                                                 {planForm.id ? 'Update Plan' : 'Create Plan'}
                                             </button>
+
+                                            {selectedExercises.length >= 2 && (
+                                                <button onClick={handleCreateSuperset} className="btn btn-secondary full-width mt-2">
+                                                    Create Superset ({selectedExercises.length})
+                                                </button>
+                                            )}
+
                                             <hr className="divider" />
                                         </div>
                                     )}
