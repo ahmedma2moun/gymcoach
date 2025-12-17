@@ -267,6 +267,49 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 10px;
+    /* Use gap instead of fixed margin on children */
+}
+
+/* Superset Group Container - Reset flex if inherited */
+.superset-group-container {
+    display: block !important;
+    /* Override .plan-preview li flex */
+    background: transparent !important;
+    /* Optional: reset background */
+    padding: 10px !important;
+}
+
+.superset-group-container .preview-item {
+    /* Ensure nested items get the item layout */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.preview-item>div {
+    flex: 1;
+    min-width: 0;
+    /* Critical for text-overflow to work in flex child */
+    margin-right: 0.5rem;
+}
+
+.preview-item>div span {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.preview-item input[type="checkbox"] {
+    flex-shrink: 0;
+    /* Remove explicit margin if using gap */
+    margin-right: 0;
+}
+
+.btn-delete-ex {
+    flex-shrink: 0;
 }
 
 /* Delete Draft Exercise Button */

@@ -859,7 +859,6 @@ const AdminDashboard = () => {
                                                                                             type="checkbox"
                                                                                             checked={isSelected}
                                                                                             onChange={() => toggleExerciseSelection(i)}
-                                                                                            style={{ marginRight: '10px' }}
                                                                                         />
                                                                                         <div>
                                                                                             <span>{ex.name} - {ex.sets}x{ex.reps}</span>
