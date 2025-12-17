@@ -142,6 +142,50 @@ app.delete('/api/plans/:planId', async (req, res) => {
     }
 });
 
+app.put('/api/plans/:planId', async (req, res) => {
+    await connectDB();
+    const { title, exercises } = req.body;
+    try {
+        const plan = await Plan.findOne({ id: req.params.planId });
+        if (!plan) return res.status(404).json({ message: 'Plan not found' });
+
+        plan.title = title;
+        // Preserve existing done/weight status if possible, or reset?
+        // Usually, admin editing a plan might want to keep existing exercises that match?
+        // But simplifying: fully replace exercises with new list, but keeping structure.
+        // If we strictly replace, user history on that specific plan instance (done status) is lost if we don't map it back.
+        // However, looking at the Admin logic, it sends the full exercise objects back.
+        // Let's see what AdminDashboard sends. It sends `planForm.exercises`.
+        // If the admin edits an existing plan, they might be adding/removing exercises.
+        // The safest approach for a simple specific plan update is to replace the exercises list with the new one.
+        // Warning: This resets 'done' status if the frontend sends clean objects.
+        // Let's check AdminDashboard `handleSavePlan` body:
+        // const body = isEditing ? { title: planForm.title, exercises: planForm.exercises } : ...
+        // And `planForm` is initialized from `userPlans`.
+        // So `planForm.exercises` has the current state of exercises (including done status if loaded from DB).
+        // So we can blindly save what comes in, BUT we must ensure we sanitize/map correctly to match schema.
+
+        plan.exercises = exercises.map(ex => ({
+            name: ex.name,
+            videoUrl: ex.videoUrl,
+            sets: ex.sets,
+            reps: ex.reps,
+            weight: ex.weight || '',
+            weightKg: ex.weightKg || '',
+            weightLbs: ex.weightLbs || '',
+            done: ex.done || false,
+            coachNote: ex.coachNote || '',
+            userNote: ex.userNote || '',
+            supersetId: ex.supersetId || null
+        }));
+
+        await plan.save();
+        res.json(plan);
+    } catch (e) {
+        res.status(500).json({ message: 'Error updating plan' });
+    }
+});
+
 // Mark exercise as done/undone
 app.patch('/api/plans/:planId', async (req, res) => {
     await connectDB();
