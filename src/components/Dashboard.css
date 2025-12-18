@@ -821,6 +821,26 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     color: var(--accent);
     font-style: italic;
     margin-top: 0.25rem;
+    display: block;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+}
+
+.user-comment {
+    font-size: 0.8rem;
+    color: #4ade80;
+    /* Green color to differentiate from coach notes */
+    font-style: italic;
+    margin-top: 0.25rem;
+    display: block;
+    padding: 0.25rem 0.5rem;
+    background: rgba(34, 197, 94, 0.1);
+    border-radius: 4px;
+    border-left: 2px solid #4ade80;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
 }
 
 .previous-data {
@@ -1161,6 +1181,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         font-size: 0.8rem;
     }
 
+    /* Coach and Client Comments */
+    .coach-note,
+    .user-comment {
+        font-size: 0.75rem;
+        margin-top: 0.5rem;
+        line-height: 1.4;
+    }
+
+    .user-comment {
+        padding: 0.4rem 0.6rem;
+        word-break: break-word;
+    }
+
     /* Calendar Controls */
     .calendar-controls h3 {
         font-size: 1rem;
@@ -1240,6 +1273,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
     .ex-meta {
         font-size: 0.8rem;
+    }
+
+    /* Coach and Client Comments - Even smaller on phones */
+    .coach-note,
+    .user-comment {
+        font-size: 0.7rem;
+        margin-top: 0.4rem;
+        line-height: 1.3;
+    }
+
+    .user-comment {
+        padding: 0.3rem 0.5rem;
     }
 
     /* Tab buttons smaller */
