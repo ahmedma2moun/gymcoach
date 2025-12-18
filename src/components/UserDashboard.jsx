@@ -201,6 +201,21 @@ const UserDashboard = () => {
         }));
     };
 
+    const copyPlanToClipboard = (plan) => {
+        const exercisesText = plan.exercises.map(ex => {
+            return `Exercise Name: ${ex.name}\nSets: ${ex.sets}\nReps: ${ex.reps}\nYoutube link: ${ex.videoUrl || 'N/A'}\n`;
+        }).join('\n');
+
+        const fullText = `${plan.title}\n\n${exercisesText}`;
+
+        navigator.clipboard.writeText(fullText).then(() => {
+            alert('Plan copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            alert('Failed to copy plan to clipboard');
+        });
+    };
+
     // Calendar Helper Functions
     const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
     const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
@@ -453,6 +468,16 @@ const UserDashboard = () => {
                                                 {plan.title}
                                                 {isCompleted && <span className="check-icon">✓</span>}
                                             </h3>
+                                            <button
+                                                className="btn-small btn-copy"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    copyPlanToClipboard(plan);
+                                                }}
+                                                title="Copy to Clipboard"
+                                            >
+                                                📋
+                                            </button>
                                             <span className="toggle-icon">{isCollapsed ? '▼' : '▲'}</span>
                                         </div>
 
