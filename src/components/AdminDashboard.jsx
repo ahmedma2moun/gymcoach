@@ -311,6 +311,21 @@ const AdminDashboard = () => {
         setSelectedDate(null); // Return to calendar to let user pick a date
     };
 
+    const copyPlanToClipboard = (plan) => {
+        const exercisesText = plan.exercises.map(ex => {
+            return `Exercise Name: ${ex.name}\nSets: ${ex.sets}\nReps: ${ex.reps}\nYoutube link: ${ex.videoUrl || 'N/A'}\n`;
+        }).join('\n');
+
+        const fullText = `${plan.title}\n\n${exercisesText}`;
+
+        navigator.clipboard.writeText(fullText).then(() => {
+            alert('Plan copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            alert('Failed to copy plan to clipboard');
+        });
+    };
+
     // Calendar Helper Functions
     const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
     const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
@@ -950,6 +965,16 @@ const AdminDashboard = () => {
                                                             ❐
                                                         </button>
                                                         <button
+                                                            className="btn-small btn-copy"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                copyPlanToClipboard(plan);
+                                                            }}
+                                                            title="Copy to Clipboard"
+                                                        >
+                                                            📋
+                                                        </button>
+                                                        <button
                                                             className="btn-small btn-delete-plan"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -973,9 +998,12 @@ const AdminDashboard = () => {
                                                                                 <span className="ex-name">{ex.name}</span>
                                                                                 <span className="ex-meta">
                                                                                     {ex.sets} Sets x {ex.reps} Reps
-                                                                                    {ex.weight && ` @ ${ex.weight}`}
-                                                                                    {ex.done && !ex.weight && ' (No weight logged)'}
+                                                                                    {ex.done && (ex.weightKg || ex.weightLbs) && ` @ ${ex.weightKg || (parseFloat(ex.weightLbs) * 0.453592).toFixed(1)} kg / ${ex.weightLbs || (parseFloat(ex.weightKg) * 2.20462).toFixed(1)} lbs`}
+                                                                                    {ex.done && !ex.weightKg && !ex.weightLbs && ex.weight && ` @ ${ex.weight}`}
+                                                                                    {ex.done && !ex.weightKg && !ex.weightLbs && !ex.weight && ' (No weight logged)'}
                                                                                 </span>
+                                                                                {ex.coachNote && <span className="coach-note">Coach Note: {ex.coachNote}</span>}
+                                                                                {ex.userNote && <span className="user-comment">Client Comment: "{ex.userNote}"</span>}
                                                                             </div>
                                                                         </div>
                                                                     </div>
