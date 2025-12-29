@@ -215,6 +215,42 @@ app.patch('/api/plans/:planId', async (req, res) => {
     }
 });
 
+// Get ALL exercise history for a user (for history tab with graphs)
+app.get('/api/plans/user/:userId/exercise-history', async (req, res) => {
+    await connectDB();
+    try {
+        const { userId } = req.params;
+
+        const plans = await Plan.find({ userId }).sort({ date: 1 }); // Sort by date ascending for chronological order
+
+        // Build a map: exerciseName -> array of { date, weightKg, weightLbs, weight, userNote }
+        const historyMap = {};
+
+        for (const plan of plans) {
+            for (const exercise of plan.exercises) {
+                if (exercise.done) {
+                    if (!historyMap[exercise.name]) {
+                        historyMap[exercise.name] = [];
+                    }
+
+                    historyMap[exercise.name].push({
+                        date: plan.date,
+                        weightKg: exercise.weightKg || '',
+                        weightLbs: exercise.weightLbs || '',
+                        weight: exercise.weight || '',
+                        userNote: exercise.userNote || ''
+                    });
+                }
+            }
+        }
+
+        res.json(historyMap);
+    } catch (e) {
+        console.error('Error fetching exercise history:', e);
+        res.status(500).json({ message: 'Error fetching exercise history' });
+    }
+});
+
 // Get previous weight and comment for an exercise
 app.get('/api/plans/user/:userId/exercise-history/:exerciseName', async (req, res) => {
     await connectDB();
@@ -238,7 +274,7 @@ app.get('/api/plans/user/:userId/exercise-history/:exerciseName', async (req, re
                         result.weight = exercise.weight;
                         return res.json(result);
                     }
-                    // If no weight but has note, we might want to keep looking for weight? 
+                    // If no weight but has note, we might want to keep looking for weight?
                     // Or just return what we have? Let's return the most recent done instance regardless.
                     return res.json(result);
                 }
