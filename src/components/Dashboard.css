@@ -475,6 +475,7 @@
     flex-grow: 1;
     min-width: 0; /* Allow flex item to shrink below content size */
     overflow: hidden;
+    max-width: 100%; /* Ensure it doesn't overflow */
 }
 
 .ex-name {
@@ -483,6 +484,8 @@
     color: var(--text-main);
     word-wrap: break-word;
     overflow-wrap: break-word;
+    white-space: normal; /* Allow text to wrap */
+    max-width: 100%;
 }
 
 .ex-meta {
@@ -490,6 +493,8 @@
     color: var(--text-muted);
     word-wrap: break-word;
     overflow-wrap: break-word;
+    white-space: normal; /* Allow text to wrap */
+    max-width: 100%;
 }
 
 .btn-video {
@@ -882,6 +887,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     display: block;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    white-space: normal; /* Allow text to wrap */
     max-width: 100%;
 }
 
