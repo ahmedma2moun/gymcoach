@@ -16,6 +16,11 @@ const UserDashboard = () => {
     const [selectedDate, setSelectedDate] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Exercise History Tab
+    const [activeTab, setActiveTab] = useState('calendar'); // 'calendar' or 'history'
+    const [exerciseHistory, setExerciseHistory] = useState({});
+    const [historyLoading, setHistoryLoading] = useState(false);
+
     useEffect(() => {
         if (user) {
             fetchPlans();
@@ -176,6 +181,20 @@ const UserDashboard = () => {
             console.error("Failed to fetch plans:", error);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchExerciseHistory = async () => {
+        setHistoryLoading(true);
+        try {
+            const res = await fetch(`/api/plans/user/${user.id}/exercise-history`);
+            const data = await res.json();
+            // Expected format: { exerciseName: [{ date, weightKg, weightLbs, weight, userNote }, ...], ... }
+            setExerciseHistory(data);
+        } catch (error) {
+            console.error("Failed to fetch exercise history:", error);
+        } finally {
+            setHistoryLoading(false);
         }
     };
 
@@ -449,6 +468,85 @@ const UserDashboard = () => {
         );
     };
 
+    const renderExerciseHistoryTab = () => {
+        if (historyLoading) {
+            return (
+                <div className="loader-container">
+                    <div className="loader-spinner"></div>
+                </div>
+            );
+        }
+
+        const exerciseNames = Object.keys(exerciseHistory);
+
+        if (exerciseNames.length === 0) {
+            return <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '2rem' }}>No exercise history available yet. Complete some workouts to see your progress!</p>;
+        }
+
+        return (
+            <div className="history-container">
+                {exerciseNames.map(exerciseName => {
+                    const history = exerciseHistory[exerciseName];
+                    if (!history || history.length === 0) return null;
+
+                    // Sort by date
+                    const sortedHistory = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                    // Prepare data for graph
+                    const maxWeight = Math.max(...sortedHistory.map(h => parseFloat(h.weightKg) || 0));
+                    const minWeight = Math.min(...sortedHistory.filter(h => h.weightKg).map(h => parseFloat(h.weightKg)));
+                    const range = maxWeight - minWeight || 1;
+
+                    return (
+                        <div key={exerciseName} className="exercise-history-card">
+                            <h3 className="exercise-history-title">{exerciseName}</h3>
+                            <div className="weight-graph">
+                                {sortedHistory.map((record, idx) => {
+                                    const weight = parseFloat(record.weightKg) || 0;
+                                    const heightPercent = range > 0 ? ((weight - minWeight) / range) * 100 : 50;
+                                    const date = new Date(record.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                                    return (
+                                        <div key={idx} className="graph-bar-container">
+                                            <div
+                                                className="graph-bar"
+                                                style={{ height: `${Math.max(heightPercent, 10)}%` }}
+                                                title={`${formatWeightDisplay(record.weightKg, record.weightLbs)} on ${date}`}
+                                            >
+                                                <span className="bar-value">{weight ? `${weight}kg` : '-'}</span>
+                                            </div>
+                                            <span className="bar-date">{date}</span>
+                                            {record.userNote && (
+                                                <div className="bar-note" title={record.userNote}>💬</div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="history-stats">
+                                <div className="stat-item">
+                                    <span className="stat-label">Sessions:</span>
+                                    <span className="stat-value">{sortedHistory.length}</span>
+                                </div>
+                                <div className="stat-item">
+                                    <span className="stat-label">Max:</span>
+                                    <span className="stat-value">{maxWeight ? `${maxWeight} kg` : 'N/A'}</span>
+                                </div>
+                                <div className="stat-item">
+                                    <span className="stat-label">Latest:</span>
+                                    <span className="stat-value">
+                                        {sortedHistory[sortedHistory.length - 1].weightKg ?
+                                            `${sortedHistory[sortedHistory.length - 1].weightKg} kg` : 'N/A'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
     return (
         <div className="dashboard">
             <header className="dash-header">
@@ -456,8 +554,31 @@ const UserDashboard = () => {
                 <button onClick={logout} className="btn btn-outline">Logout</button>
             </header>
 
+            {/* Tab Navigation */}
+            <div className="admin-tabs">
+                <button
+                    className={`tab-btn ${activeTab === 'calendar' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('calendar')}
+                >
+                    Workout Calendar
+                </button>
+                <button
+                    className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
+                    onClick={() => {
+                        setActiveTab('history');
+                        if (Object.keys(exerciseHistory).length === 0) {
+                            fetchExerciseHistory();
+                        }
+                    }}
+                >
+                    Exercise History
+                </button>
+            </div>
+
             <div className="plans-container">
-                {!selectedDate ? (
+                {activeTab === 'history' ? (
+                    renderExerciseHistoryTab()
+                ) : !selectedDate ? (
                     renderCalendar()
                 ) : (
                     <div>
