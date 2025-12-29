@@ -313,6 +313,51 @@
     flex-shrink: 0;
 }
 
+/* Reorder Buttons */
+.reorder-buttons {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.btn-reorder {
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    color: var(--primary);
+    font-weight: bold;
+    font-size: 0.85rem;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    padding: 0;
+}
+
+.btn-reorder:hover:not(:disabled) {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.btn-reorder:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    background: rgba(99, 102, 241, 0.1);
+    border-color: rgba(99, 102, 241, 0.1);
+}
+
+.btn-reorder-up:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+
+.btn-reorder-down:hover:not(:disabled) {
+    transform: translateY(2px);
+}
+
 /* Delete Draft Exercise Button */
 .btn-delete-ex {
     background: transparent;
@@ -1198,6 +1243,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     .calendar-controls h3 {
         font-size: 1rem;
     }
+
+    .btn-reorder {
+        width: 24px;
+        height: 24px;
+        font-size: 0.75rem;
+    }
+
+    .reorder-buttons {
+        gap: 2px;
+    }
 }
 
 /* Mobile phones (480px and below) */
@@ -1307,6 +1362,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     .calendar-controls .btn-small {
         width: 32px;
         height: 32px;
+    }
+
+    .btn-reorder {
+        width: 20px;
+        height: 20px;
+        font-size: 0.7rem;
     }
 }
 

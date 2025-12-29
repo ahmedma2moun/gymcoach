@@ -108,6 +108,161 @@ const AdminDashboard = () => {
         );
     };
 
+    // Get all exercises that belong to the same logical unit (single exercise or full superset)
+    const getLogicalUnit = (index) => {
+        const exercise = planForm.exercises[index];
+        if (!exercise) return { indices: [], supersetId: null };
+
+        // If no superset, return just this exercise
+        if (!exercise.supersetId) {
+            return { indices: [index], supersetId: null };
+        }
+
+        // Find all exercises with the same supersetId
+        const indices = [];
+        planForm.exercises.forEach((ex, idx) => {
+            if (ex.supersetId === exercise.supersetId) {
+                indices.push(idx);
+            }
+        });
+
+        return {
+            indices: indices.sort((a, b) => a - b),
+            supersetId: exercise.supersetId
+        };
+    };
+
+    // Get all logical units in order for boundary detection
+    const getAllLogicalUnits = () => {
+        const units = [];
+        const processedIndices = new Set();
+
+        planForm.exercises.forEach((ex, idx) => {
+            if (processedIndices.has(idx)) return;
+
+            const unit = getLogicalUnit(idx);
+            unit.indices.forEach(i => processedIndices.add(i));
+
+            units.push({
+                startIndex: Math.min(...unit.indices),
+                endIndex: Math.max(...unit.indices),
+                supersetId: unit.supersetId
+            });
+        });
+
+        return units;
+    };
+
+    // Check if exercise/superset is at first position
+    const isFirstUnit = (index) => {
+        const allUnits = getAllLogicalUnits();
+        if (allUnits.length === 0) return true;
+
+        const unit = getLogicalUnit(index);
+        return unit.indices.includes(allUnits[0].startIndex);
+    };
+
+    // Check if exercise/superset is at last position
+    const isLastUnit = (index) => {
+        const allUnits = getAllLogicalUnits();
+        if (allUnits.length === 0) return true;
+
+        const unit = getLogicalUnit(index);
+        const lastUnit = allUnits[allUnits.length - 1];
+        return unit.indices.includes(lastUnit.startIndex);
+    };
+
+    const moveExerciseUp = (index) => {
+        const currentUnit = getLogicalUnit(index);
+        const allUnits = getAllLogicalUnits();
+
+        // Find current unit in the units list
+        const currentUnitIndex = allUnits.findIndex(unit =>
+            currentUnit.indices.includes(unit.startIndex)
+        );
+
+        // If first unit, cannot move up
+        if (currentUnitIndex === 0) return;
+
+        // Get the previous unit
+        const previousUnit = allUnits[currentUnitIndex - 1];
+
+        // Extract exercises for reconstruction
+        const currentExercises = currentUnit.indices.map(i => planForm.exercises[i]);
+        const previousExercises = [];
+        for (let i = previousUnit.startIndex; i <= previousUnit.endIndex; i++) {
+            previousExercises.push(planForm.exercises[i]);
+        }
+
+        // Build new array
+        const newExercises = [];
+
+        // Part 1: Everything before previousUnit
+        for (let i = 0; i < previousUnit.startIndex; i++) {
+            newExercises.push(planForm.exercises[i]);
+        }
+
+        // Part 2: Current unit (moving up)
+        currentExercises.forEach(ex => newExercises.push(ex));
+
+        // Part 3: Previous unit (now after)
+        previousExercises.forEach(ex => newExercises.push(ex));
+
+        // Part 4: Everything after currentUnit's original position
+        for (let i = currentUnit.indices[currentUnit.indices.length - 1] + 1;
+             i < planForm.exercises.length; i++) {
+            newExercises.push(planForm.exercises[i]);
+        }
+
+        setPlanForm({ ...planForm, exercises: newExercises });
+        setSelectedExercises([]); // Clear selections to avoid stale indices
+    };
+
+    const moveExerciseDown = (index) => {
+        const currentUnit = getLogicalUnit(index);
+        const allUnits = getAllLogicalUnits();
+
+        // Find current unit in the units list
+        const currentUnitIndex = allUnits.findIndex(unit =>
+            currentUnit.indices.includes(unit.startIndex)
+        );
+
+        // If last unit, cannot move down
+        if (currentUnitIndex === allUnits.length - 1) return;
+
+        // Get the next unit
+        const nextUnit = allUnits[currentUnitIndex + 1];
+
+        // Extract exercises for reconstruction
+        const currentExercises = currentUnit.indices.map(i => planForm.exercises[i]);
+        const nextExercises = [];
+        for (let i = nextUnit.startIndex; i <= nextUnit.endIndex; i++) {
+            nextExercises.push(planForm.exercises[i]);
+        }
+
+        // Build new array
+        const newExercises = [];
+
+        // Part 1: Everything before currentUnit
+        for (let i = 0; i < currentUnit.indices[0]; i++) {
+            newExercises.push(planForm.exercises[i]);
+        }
+
+        // Part 2: Next unit (moving up)
+        nextExercises.forEach(ex => newExercises.push(ex));
+
+        // Part 3: Current unit (moving down)
+        currentExercises.forEach(ex => newExercises.push(ex));
+
+        // Part 4: Everything after nextUnit's original position
+        for (let i = nextUnit.endIndex + 1; i < planForm.exercises.length; i++) {
+            newExercises.push(planForm.exercises[i]);
+        }
+
+        setPlanForm({ ...planForm, exercises: newExercises });
+        setSelectedExercises([]); // Clear selections to avoid stale indices
+    };
+
     const handleCreateSuperset = () => {
         if (selectedExercises.length < 2) return;
 
@@ -860,8 +1015,30 @@ const AdminDashboard = () => {
                                                             if (item.type === 'superset') {
                                                                 return (
                                                                     <li key={`group-${groupIdx}`} className="superset-group-container" style={{ border: '2px dashed #00d2ff', borderRadius: '8px', padding: '10px', marginBottom: '10px', position: 'relative', listStyle: 'none' }}>
-                                                                        <div className="superset-label" style={{ position: 'absolute', top: '-10px', left: '10px', background: '#242424', padding: '0 5px', color: '#00d2ff', fontSize: '0.8em', fontWeight: 'bold' }}>
-                                                                            Superset
+                                                                        <div className="superset-label" style={{ position: 'absolute', top: '-10px', left: '10px', background: '#242424', padding: '0 5px', color: '#00d2ff', fontSize: '0.8em', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                            <span>Superset</span>
+
+                                                                            <div className="reorder-buttons">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    className="btn-reorder btn-reorder-up"
+                                                                                    onClick={() => moveExerciseUp(item.items[0].originalIndex)}
+                                                                                    disabled={isFirstUnit(item.items[0].originalIndex)}
+                                                                                    title="Move superset up"
+                                                                                >
+                                                                                    ↑
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    className="btn-reorder btn-reorder-down"
+                                                                                    onClick={() => moveExerciseDown(item.items[0].originalIndex)}
+                                                                                    disabled={isLastUnit(item.items[0].originalIndex)}
+                                                                                    title="Move superset down"
+                                                                                >
+                                                                                    ↓
+                                                                                </button>
+                                                                            </div>
+
                                                                             <button type="button" className="btn-small text-btn" onClick={() => handleUngroupSuperset(item.id)} style={{ marginLeft: '10px', color: '#ff4d4d' }}>(ungroup)</button>
                                                                         </div>
                                                                         <ul style={{ padding: 0, marginTop: '5px' }}>
@@ -908,6 +1085,28 @@ const AdminDashboard = () => {
                                                                             <span>{ex.name} - {ex.sets}x{ex.reps}</span>
                                                                             {ex.coachNote && <div className="preview-note">Note: {ex.coachNote}</div>}
                                                                         </div>
+
+                                                                        <div className="reorder-buttons">
+                                                                            <button
+                                                                                type="button"
+                                                                                className="btn-reorder btn-reorder-up"
+                                                                                onClick={() => moveExerciseUp(i)}
+                                                                                disabled={isFirstUnit(i)}
+                                                                                title="Move up"
+                                                                            >
+                                                                                ↑
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                className="btn-reorder btn-reorder-down"
+                                                                                onClick={() => moveExerciseDown(i)}
+                                                                                disabled={isLastUnit(i)}
+                                                                                title="Move down"
+                                                                            >
+                                                                                ↓
+                                                                            </button>
+                                                                        </div>
+
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => removeExerciseFromPlan(i)}
