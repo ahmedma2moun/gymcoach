@@ -145,17 +145,32 @@ const UserDashboard = () => {
             const data = await res.json();
             setPlans(data);
 
-            const weights = {};
+            // Collect unique exercise names that need previous weight data
+            const uniqueExercises = new Set();
             for (const plan of data) {
                 for (const exercise of plan.exercises) {
-                    if (!exercise.done && !weights[exercise.name]) {
-                        const prev = await fetchPreviousWeight(exercise.name);
-                        if (prev) {
-                            weights[exercise.name] = prev;
-                        }
+                    if (!exercise.done) {
+                        uniqueExercises.add(exercise.name);
                     }
                 }
             }
+
+            // Fetch all previous weights in parallel
+            const weightPromises = Array.from(uniqueExercises).map(async (exerciseName) => {
+                const prev = await fetchPreviousWeight(exerciseName);
+                return { exerciseName, prev };
+            });
+
+            const weightResults = await Promise.all(weightPromises);
+
+            // Build weights object from results
+            const weights = {};
+            weightResults.forEach(({ exerciseName, prev }) => {
+                if (prev) {
+                    weights[exerciseName] = prev;
+                }
+            });
+
             setPreviousWeights(weights);
         } catch (error) {
             console.error("Failed to fetch plans:", error);
