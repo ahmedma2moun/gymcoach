@@ -500,28 +500,67 @@ const UserDashboard = () => {
                     return (
                         <div key={exerciseName} className="exercise-history-card">
                             <h3 className="exercise-history-title">{exerciseName}</h3>
-                            <div className="weight-graph">
-                                {sortedHistory.map((record, idx) => {
-                                    const weight = parseFloat(record.weightKg) || 0;
-                                    const heightPercent = range > 0 ? ((weight - minWeight) / range) * 100 : 50;
-                                    const date = new Date(record.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                            <div className="line-chart-container">
+                                <svg className="line-chart" viewBox="0 0 600 250" preserveAspectRatio="xMidYMid meet">
+                                    {/* Grid lines */}
+                                    <line x1="50" y1="200" x2="550" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                                    <line x1="50" y1="150" x2="550" y2="150" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                                    <line x1="50" y1="100" x2="550" y2="100" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                                    <line x1="50" y1="50" x2="550" y2="50" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
 
-                                    return (
-                                        <div key={idx} className="graph-bar-container">
-                                            <div
-                                                className="graph-bar"
-                                                style={{ height: `${Math.max(heightPercent, 10)}%` }}
-                                                title={`${formatWeightDisplay(record.weightKg, record.weightLbs)} on ${date}`}
-                                            >
-                                                <span className="bar-value">{weight ? `${weight}kg` : '-'}</span>
-                                            </div>
-                                            <span className="bar-date">{date}</span>
-                                            {record.userNote && (
-                                                <div className="bar-note" title={record.userNote}>💬</div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                                    {/* Y-axis labels */}
+                                    <text x="35" y="205" fill="var(--text-muted)" fontSize="10" textAnchor="end">{minWeight.toFixed(1)}</text>
+                                    <text x="35" y="55" fill="var(--text-muted)" fontSize="10" textAnchor="end">{maxWeight.toFixed(1)}</text>
+
+                                    {/* Line path */}
+                                    <polyline
+                                        points={sortedHistory.map((record, idx) => {
+                                            const weight = parseFloat(record.weightKg) || 0;
+                                            const x = 50 + (idx / (sortedHistory.length - 1 || 1)) * 500;
+                                            const y = 200 - (range > 0 ? ((weight - minWeight) / range) * 150 : 75);
+                                            return `${x},${y}`;
+                                        }).join(' ')}
+                                        fill="none"
+                                        stroke="url(#lineGradient)"
+                                        strokeWidth="3"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+
+                                    {/* Gradient definition */}
+                                    <defs>
+                                        <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" stopColor="var(--primary)" />
+                                            <stop offset="100%" stopColor="var(--accent)" />
+                                        </linearGradient>
+                                    </defs>
+
+                                    {/* Data points */}
+                                    {sortedHistory.map((record, idx) => {
+                                        const weight = parseFloat(record.weightKg) || 0;
+                                        const x = 50 + (idx / (sortedHistory.length - 1 || 1)) * 500;
+                                        const y = 200 - (range > 0 ? ((weight - minWeight) / range) * 150 : 75);
+                                        const date = new Date(record.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                                        return (
+                                            <g key={idx}>
+                                                <circle
+                                                    cx={x}
+                                                    cy={y}
+                                                    r="5"
+                                                    fill="var(--primary)"
+                                                    stroke="white"
+                                                    strokeWidth="2"
+                                                    className="data-point"
+                                                >
+                                                    <title>{`${weight}kg on ${date}`}</title>
+                                                </circle>
+                                                {/* X-axis label */}
+                                                <text x={x} y="220" fontSize="9" textAnchor="middle" fill="var(--text-muted)">{date}</text>
+                                            </g>
+                                        );
+                                    })}
+                                </svg>
                             </div>
                             <div className="history-stats">
                                 <div className="stat-item">

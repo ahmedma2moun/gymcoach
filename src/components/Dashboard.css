@@ -1612,68 +1612,32 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     text-align: center;
 }
 
-.weight-graph {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-around;
-    height: 200px;
-    gap: 0.5rem;
+.line-chart-container {
+    width: 100%;
     padding: 1rem;
     background: rgba(15, 23, 42, 0.3);
     border-radius: var(--radius-sm);
     margin-bottom: 1.5rem;
 }
 
-.graph-bar-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex: 1;
-    min-width: 40px;
-    max-width: 80px;
+.line-chart {
+    width: 100%;
+    height: auto;
+    max-height: 300px;
 }
 
-.graph-bar {
-    width: 100%;
-    background: linear-gradient(180deg, var(--primary) 0%, var(--accent) 100%);
-    border-radius: 4px 4px 0 0;
-    min-height: 20px;
-    position: relative;
+.line-chart text {
+    fill: var(--text-muted);
+}
+
+.data-point {
     cursor: pointer;
-    transition: var(--transition);
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding-top: 0.25rem;
+    transition: all 0.2s ease;
 }
 
-.graph-bar:hover {
-    filter: brightness(1.2);
-    transform: scaleY(1.05);
-}
-
-.bar-value {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: white;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.bar-date {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    margin-top: 0.5rem;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    width: 100%;
-}
-
-.bar-note {
-    font-size: 0.9rem;
-    margin-top: 0.25rem;
-    cursor: help;
+.data-point:hover {
+    r: 7;
+    filter: brightness(1.3);
 }
 
 .history-stats {
@@ -1719,23 +1683,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         font-size: 1.1rem;
     }
 
-    .weight-graph {
-        height: 150px;
+    .line-chart-container {
         padding: 0.5rem;
-        gap: 0.25rem;
     }
 
-    .graph-bar-container {
-        min-width: 30px;
-        max-width: 60px;
-    }
-
-    .bar-value {
-        font-size: 0.6rem;
-    }
-
-    .bar-date {
-        font-size: 0.6rem;
+    .line-chart {
+        max-height: 200px;
     }
 
     .stat-label {
@@ -1748,17 +1701,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 @media (max-width: 480px) {
-    .weight-graph {
-        height: 120px;
+    .line-chart-container {
         padding: 0.25rem;
     }
 
-    .bar-value {
-        font-size: 0.55rem;
+    .line-chart {
+        max-height: 180px;
     }
 
-    .bar-date {
-        font-size: 0.55rem;
+    .line-chart text {
+        font-size: 8px;
     }
 
     .history-stats {
