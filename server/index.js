@@ -186,6 +186,48 @@ app.put('/api/plans/:planId', async (req, res) => {
     }
 });
 
+// Clone plan to another user
+app.post('/api/plans/clone', async (req, res) => {
+    await connectDB();
+    const { planId, targetUserId, date } = req.body;
+
+    try {
+        // Find the original plan
+        const originalPlan = await Plan.findOne({ id: planId });
+
+        if (!originalPlan) {
+            return res.status(404).json({ message: 'Original plan not found' });
+        }
+
+        // Create a new plan for the target user
+        const newPlan = await Plan.create({
+            id: Date.now(),
+            userId: targetUserId,
+            title: originalPlan.title,
+            date: date,
+            status: 'active',
+            exercises: originalPlan.exercises.map(ex => ({
+                name: ex.name,
+                videoUrl: ex.videoUrl,
+                sets: ex.sets,
+                reps: ex.reps,
+                coachNote: ex.coachNote || '',
+                supersetId: ex.supersetId || null,
+                done: false,
+                weight: '',
+                weightKg: '',
+                weightLbs: '',
+                userNote: ''
+            }))
+        });
+
+        res.json(newPlan);
+    } catch (e) {
+        console.error('Error cloning plan:', e);
+        res.status(500).json({ message: 'Error cloning plan' });
+    }
+});
+
 // Mark exercise as done/undone
 app.patch('/api/plans/:planId', async (req, res) => {
     await connectDB();

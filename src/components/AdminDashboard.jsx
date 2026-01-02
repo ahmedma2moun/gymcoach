@@ -13,6 +13,12 @@ const AdminDashboard = () => {
     const [selectedExercises, setSelectedExercises] = useState([]); // Array of indices
     const [cloningPlan, setCloningPlan] = useState(null);
 
+    // Clone to user state
+    const [cloneToUserModal, setCloneToUserModal] = useState(false);
+    const [planToClone, setPlanToClone] = useState(null);
+    const [targetUserId, setTargetUserId] = useState('');
+    const [cloneDate, setCloneDate] = useState('');
+
     // Exercise library state
     const [exercises, setExercises] = useState([]);
     const [newExercise, setNewExercise] = useState({ name: '', videoUrl: '' });
@@ -464,6 +470,49 @@ const AdminDashboard = () => {
         setCloningPlan(plan);
         alert('Plan copied! Select a future date to paste it.');
         setSelectedDate(null); // Return to calendar to let user pick a date
+    };
+
+    const handleClonePlanToUser = (plan) => {
+        setPlanToClone(plan);
+        setCloneToUserModal(true);
+        // Set default date to today
+        const today = new Date().toISOString().split('T')[0];
+        setCloneDate(today);
+    };
+
+    const executeClonePlanToUser = async () => {
+        if (!targetUserId || !cloneDate) {
+            alert('Please select a user and date');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const res = await fetch('/api/plans/clone', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    planId: planToClone.id,
+                    targetUserId,
+                    date: cloneDate
+                })
+            });
+
+            if (res.ok) {
+                alert('Plan cloned successfully!');
+                setCloneToUserModal(false);
+                setPlanToClone(null);
+                setTargetUserId('');
+                setCloneDate('');
+            } else {
+                alert('Error cloning plan');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error cloning plan');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const copyPlanToClipboard = (plan) => {
@@ -1159,9 +1208,19 @@ const AdminDashboard = () => {
                                                                 e.stopPropagation();
                                                                 handleClonePlan(plan);
                                                             }}
-                                                            title="Clone Plan"
+                                                            title="Clone to Date"
                                                         >
                                                             ❐
+                                                        </button>
+                                                        <button
+                                                            className="btn-small btn-clone"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleClonePlanToUser(plan);
+                                                            }}
+                                                            title="Clone to User"
+                                                        >
+                                                            👥
                                                         </button>
                                                         <button
                                                             className="btn-small btn-copy"
@@ -1221,6 +1280,67 @@ const AdminDashboard = () => {
                 </div>
             )
             }
+
+            {/* Clone to User Modal */}
+            {cloneToUserModal && (
+                <div className="modal-overlay" onClick={() => setCloneToUserModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Clone Plan to User</h2>
+                            <button onClick={() => setCloneToUserModal(false)} className="btn-close">×</button>
+                        </div>
+                        <div>
+                            <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>
+                                Cloning: <strong style={{ color: 'var(--primary)' }}>{planToClone?.title}</strong>
+                            </p>
+
+                            <label className="full-width" style={{ marginBottom: '0.5rem', display: 'block', color: 'var(--text-main)' }}>
+                                Select User:
+                            </label>
+                            <select
+                                className="full-width exercise-select"
+                                value={targetUserId}
+                                onChange={(e) => setTargetUserId(e.target.value)}
+                                style={{ marginBottom: '1rem' }}
+                            >
+                                <option value="">-- Select User --</option>
+                                {users.filter(u => u.role === 'user').map(u => (
+                                    <option key={u.id} value={u.id}>{u.username}</option>
+                                ))}
+                            </select>
+
+                            <label className="full-width" style={{ marginBottom: '0.5rem', display: 'block', color: 'var(--text-main)' }}>
+                                Select Date:
+                            </label>
+                            <input
+                                type="date"
+                                className="full-width"
+                                value={cloneDate}
+                                onChange={(e) => setCloneDate(e.target.value)}
+                                style={{ marginBottom: '1.5rem' }}
+                            />
+
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <button
+                                    onClick={executeClonePlanToUser}
+                                    className="btn btn-primary"
+                                    style={{ flex: 1 }}
+                                    disabled={!targetUserId || !cloneDate}
+                                >
+                                    Clone Plan
+                                </button>
+                                <button
+                                    onClick={() => setCloneToUserModal(false)}
+                                    className="btn btn-outline"
+                                    style={{ flex: 1 }}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };
