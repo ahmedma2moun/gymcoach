@@ -13,6 +13,10 @@ const AdminDashboard = () => {
     const [selectedExercises, setSelectedExercises] = useState([]); // Array of indices
     const [cloningPlan, setCloningPlan] = useState(null);
 
+    // Searchable dropdown state
+    const [exerciseSearchTerm, setExerciseSearchTerm] = useState('');
+    const [showExerciseDropdown, setShowExerciseDropdown] = useState(false);
+
     // Clone to user state
     const [cloneToUserModal, setCloneToUserModal] = useState(false);
     const [planToClone, setPlanToClone] = useState(null);
@@ -41,6 +45,18 @@ const AdminDashboard = () => {
             setIsLoading(false);
         };
         init();
+    }, []);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (!event.target.closest('.searchable-dropdown')) {
+                setShowExerciseDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     const fetchUsers = async () => {
@@ -96,7 +112,18 @@ const AdminDashboard = () => {
             }]
         });
         setExerciseInput({ exerciseId: '', sets: '', reps: '', coachNote: '' });
+        setExerciseSearchTerm('');
     };
+
+    const handleExerciseSelect = (exercise) => {
+        setExerciseInput({ ...exerciseInput, exerciseId: exercise.id });
+        setExerciseSearchTerm(exercise.name);
+        setShowExerciseDropdown(false);
+    };
+
+    const filteredExercises = exercises.filter(ex =>
+        ex.name.toLowerCase().includes(exerciseSearchTerm.toLowerCase())
+    );
 
 
 
@@ -1008,16 +1035,35 @@ const AdminDashboard = () => {
                                             <div className="exercise-builder">
                                                 <h4>Exercises</h4>
                                                 <div className="ex-inputs">
-                                                    <select
-                                                        value={exerciseInput.exerciseId}
-                                                        onChange={e => setExerciseInput({ ...exerciseInput, exerciseId: e.target.value })}
-                                                        className="exercise-select"
-                                                    >
-                                                        <option value="">Select Exercise</option>
-                                                        {exercises.map(ex => (
-                                                            <option key={ex.id} value={ex.id}>{ex.name}</option>
-                                                        ))}
-                                                    </select>
+                                                    <div className="searchable-dropdown" style={{ position: 'relative' }}>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Search Exercise..."
+                                                            value={exerciseSearchTerm}
+                                                            onChange={(e) => {
+                                                                setExerciseSearchTerm(e.target.value);
+                                                                setShowExerciseDropdown(true);
+                                                                if (!e.target.value) {
+                                                                    setExerciseInput({ ...exerciseInput, exerciseId: '' });
+                                                                }
+                                                            }}
+                                                            onFocus={() => setShowExerciseDropdown(true)}
+                                                            className="exercise-select"
+                                                        />
+                                                        {showExerciseDropdown && filteredExercises.length > 0 && (
+                                                            <div className="dropdown-list">
+                                                                {filteredExercises.map(ex => (
+                                                                    <div
+                                                                        key={ex.id}
+                                                                        className="dropdown-item"
+                                                                        onClick={() => handleExerciseSelect(ex)}
+                                                                    >
+                                                                        {ex.name}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                     <input
                                                         placeholder="Sets"
                                                         value={exerciseInput.sets}

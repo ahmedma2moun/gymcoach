@@ -132,6 +132,63 @@
     margin-bottom: 1rem;
 }
 
+/* Searchable Dropdown Styles */
+.searchable-dropdown {
+    position: relative;
+    width: 100%;
+    grid-column: 1;
+}
+
+.dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: none;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+.dropdown-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--text-main);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.dropdown-item:hover {
+    background: rgba(99, 102, 241, 0.2);
+    color: var(--primary);
+}
+
+.dropdown-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.dropdown-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.dropdown-list::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+}
+
+.dropdown-list::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
+
 .exercise-select {
     width: 100%;
     padding: 0.75rem 1rem;
@@ -1275,6 +1332,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     .ex-inputs input,
     .ex-inputs select {
         width: 100%;
+    }
+
+    .searchable-dropdown {
+        grid-column: 1;
+    }
+
+    .dropdown-list {
+        max-height: 150px;
+    }
+
+    .dropdown-item {
+        padding: 0.6rem 0.75rem;
+        font-size: 0.9rem;
     }
 
     /* Weight Inputs - Keep side by side but smaller */
