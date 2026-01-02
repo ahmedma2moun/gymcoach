@@ -7,7 +7,6 @@ const AdminDashboard = () => {
     const [users, setUsers] = useState([]);
     const [activeTab, setActiveTab] = useState('user-plans'); // Default to User Plans (leftmost)
     const [newUser, setNewUser] = useState({ username: '', password: '' });
-    const [selectedUser, setSelectedUser] = useState(null);
     const [planForm, setPlanForm] = useState({ id: null, title: '', date: '', exercises: [] }); // Renamed from newPlan to planForm for clarity
     const [exerciseInput, setExerciseInput] = useState({ exerciseId: '', sets: '', reps: '', coachNote: '' });
     const [selectedExercises, setSelectedExercises] = useState([]); // Array of indices
@@ -39,7 +38,7 @@ const AdminDashboard = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     // Exercise History State
-    const [historyUserId, setHistoryUserId] = useState('');
+    const [viewingHistoryUser, setViewingHistoryUser] = useState(null);
     const [exerciseHistory, setExerciseHistory] = useState({});
     const [historyLoading, setHistoryLoading] = useState(false);
 
@@ -575,51 +574,22 @@ const AdminDashboard = () => {
         }
     };
 
-    const handleUserSelectForHistory = (userId) => {
-        setHistoryUserId(userId);
-        if (userId) {
-            fetchExerciseHistory(userId);
-        } else {
-            setExerciseHistory({});
+    const handleViewExerciseHistory = async (user) => {
+        setViewingHistoryUser(user);
+        setHistoryLoading(true);
+        try {
+            await fetchExerciseHistory(user.id);
+        } catch (error) {
+            console.error("Failed to fetch exercise history:", error);
         }
     };
 
-    const formatWeightDisplay = (kg, lbs) => {
-        if (kg && lbs) return `${kg} kg / ${lbs} lbs`;
-        if (kg) {
-            const calcLbs = (parseFloat(kg) * 2.20462).toFixed(1);
-            return `${kg} kg / ${calcLbs} lbs`;
-        }
-        if (lbs) {
-            const calcKg = (parseFloat(lbs) * 0.453592).toFixed(1);
-            return `${calcKg} kg / ${lbs} lbs`;
-        }
-        return '';
+    const closeHistoryView = () => {
+        setViewingHistoryUser(null);
+        setExerciseHistory({});
     };
 
-    const renderExerciseHistoryTab = () => {
-        if (!historyUserId) {
-            return (
-                <div className="dash-card">
-                    <h2>Exercise History</h2>
-                    <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                        Select a user to view their exercise weight progression history
-                    </p>
-                    <select
-                        className="full-width exercise-select"
-                        value={historyUserId}
-                        onChange={(e) => handleUserSelectForHistory(e.target.value)}
-                        style={{ marginBottom: '1rem' }}
-                    >
-                        <option value="">-- Select User --</option>
-                        {users.filter(u => u.role === 'user').map(u => (
-                            <option key={u.id} value={u.id}>{u.username}</option>
-                        ))}
-                    </select>
-                </div>
-            );
-        }
-
+    const renderExerciseHistoryModal = () => {
         if (historyLoading) {
             return (
                 <div className="loader-container">
@@ -629,25 +599,9 @@ const AdminDashboard = () => {
         }
 
         const exerciseNames = Object.keys(exerciseHistory);
-        const selectedUser = users.find(u => u.id == historyUserId);
 
         return (
             <div>
-                <div className="dash-card" style={{ marginBottom: '1rem' }}>
-                    <h2>Exercise History - {selectedUser?.username}</h2>
-                    <select
-                        className="full-width exercise-select"
-                        value={historyUserId}
-                        onChange={(e) => handleUserSelectForHistory(e.target.value)}
-                        style={{ marginTop: '1rem' }}
-                    >
-                        <option value="">-- Select User --</option>
-                        {users.filter(u => u.role === 'user').map(u => (
-                            <option key={u.id} value={u.id}>{u.username}</option>
-                        ))}
-                    </select>
-                </div>
-
                 {exerciseNames.length === 0 ? (
                     <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '2rem' }}>
                         No exercise history available for this user yet.
@@ -1050,12 +1004,6 @@ const AdminDashboard = () => {
                         User Plans
                     </button>
                     <button
-                        className={`tab-btn ${activeTab === 'exercise-history' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('exercise-history')}
-                    >
-                        Exercise History
-                    </button>
-                    <button
                         className={`tab-btn ${activeTab === 'exercises' ? 'active' : ''}`}
                         onClick={() => setActiveTab('exercises')}
                     >
@@ -1097,6 +1045,13 @@ const AdminDashboard = () => {
                                                         title="View Progress"
                                                     >
                                                         📅
+                                                    </button>
+                                                    <button
+                                                        className="btn-small btn-view"
+                                                        onClick={() => handleViewExerciseHistory(u)}
+                                                        title="Exercise History"
+                                                    >
+                                                        📊
                                                     </button>
                                                 </div>
                                             )}
@@ -1171,8 +1126,6 @@ const AdminDashboard = () => {
                                 </ul>
                             </div>
                         )}
-
-                        {activeTab === 'exercise-history' && renderExerciseHistoryTab()}
 
                         {activeTab === 'create-user' && (
                             <div className="dash-card">
@@ -1583,6 +1536,19 @@ const AdminDashboard = () => {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Exercise History Modal */}
+            {viewingHistoryUser && (
+                <div className="modal-overlay">
+                    <div className="modal-content dash-card">
+                        <div className="modal-header">
+                            <h2>Exercise History: {viewingHistoryUser.username}</h2>
+                            <button onClick={closeHistoryView} className="btn-close">X</button>
+                        </div>
+                        {renderExerciseHistoryModal()}
                     </div>
                 </div>
             )}
