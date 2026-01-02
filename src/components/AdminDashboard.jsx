@@ -38,6 +38,11 @@ const AdminDashboard = () => {
     const [selectedDate, setSelectedDate] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Exercise History State
+    const [historyUserId, setHistoryUserId] = useState('');
+    const [exerciseHistory, setExerciseHistory] = useState({});
+    const [historyLoading, setHistoryLoading] = useState(false);
+
     useEffect(() => {
         const init = async () => {
             setIsLoading(true);
@@ -557,6 +562,192 @@ const AdminDashboard = () => {
         });
     };
 
+    const fetchExerciseHistory = async (userId) => {
+        setHistoryLoading(true);
+        try {
+            const res = await fetch(`/api/plans/user/${userId}/exercise-history`);
+            const data = await res.json();
+            setExerciseHistory(data);
+        } catch (error) {
+            console.error("Failed to fetch exercise history:", error);
+        } finally {
+            setHistoryLoading(false);
+        }
+    };
+
+    const handleUserSelectForHistory = (userId) => {
+        setHistoryUserId(userId);
+        if (userId) {
+            fetchExerciseHistory(userId);
+        } else {
+            setExerciseHistory({});
+        }
+    };
+
+    const formatWeightDisplay = (kg, lbs) => {
+        if (kg && lbs) return `${kg} kg / ${lbs} lbs`;
+        if (kg) {
+            const calcLbs = (parseFloat(kg) * 2.20462).toFixed(1);
+            return `${kg} kg / ${calcLbs} lbs`;
+        }
+        if (lbs) {
+            const calcKg = (parseFloat(lbs) * 0.453592).toFixed(1);
+            return `${calcKg} kg / ${lbs} lbs`;
+        }
+        return '';
+    };
+
+    const renderExerciseHistoryTab = () => {
+        if (!historyUserId) {
+            return (
+                <div className="dash-card">
+                    <h2>Exercise History</h2>
+                    <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                        Select a user to view their exercise weight progression history
+                    </p>
+                    <select
+                        className="full-width exercise-select"
+                        value={historyUserId}
+                        onChange={(e) => handleUserSelectForHistory(e.target.value)}
+                        style={{ marginBottom: '1rem' }}
+                    >
+                        <option value="">-- Select User --</option>
+                        {users.filter(u => u.role === 'user').map(u => (
+                            <option key={u.id} value={u.id}>{u.username}</option>
+                        ))}
+                    </select>
+                </div>
+            );
+        }
+
+        if (historyLoading) {
+            return (
+                <div className="loader-container">
+                    <div className="loader-spinner"></div>
+                </div>
+            );
+        }
+
+        const exerciseNames = Object.keys(exerciseHistory);
+        const selectedUser = users.find(u => u.id == historyUserId);
+
+        return (
+            <div>
+                <div className="dash-card" style={{ marginBottom: '1rem' }}>
+                    <h2>Exercise History - {selectedUser?.username}</h2>
+                    <select
+                        className="full-width exercise-select"
+                        value={historyUserId}
+                        onChange={(e) => handleUserSelectForHistory(e.target.value)}
+                        style={{ marginTop: '1rem' }}
+                    >
+                        <option value="">-- Select User --</option>
+                        {users.filter(u => u.role === 'user').map(u => (
+                            <option key={u.id} value={u.id}>{u.username}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {exerciseNames.length === 0 ? (
+                    <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '2rem' }}>
+                        No exercise history available for this user yet.
+                    </p>
+                ) : (
+                    <div className="history-container">
+                        {exerciseNames.map(exerciseName => {
+                            const history = exerciseHistory[exerciseName];
+                            if (!history || history.length === 0) return null;
+
+                            const sortedHistory = [...history].sort((a, b) => new Date(a.date) - new Date(b.date));
+                            const maxWeight = Math.max(...sortedHistory.map(h => parseFloat(h.weightKg) || 0));
+                            const minWeight = Math.min(...sortedHistory.filter(h => h.weightKg).map(h => parseFloat(h.weightKg)));
+                            const range = maxWeight - minWeight || 1;
+
+                            return (
+                                <div key={exerciseName} className="exercise-history-card">
+                                    <h3 className="exercise-history-title">{exerciseName}</h3>
+                                    <div className="line-chart-container">
+                                        <svg className="line-chart" viewBox="0 0 600 250" preserveAspectRatio="xMidYMid meet">
+                                            <line x1="50" y1="200" x2="550" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                                            <line x1="50" y1="150" x2="550" y2="150" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                                            <line x1="50" y1="100" x2="550" y2="100" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                                            <line x1="50" y1="50" x2="550" y2="50" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+
+                                            <text x="35" y="205" fill="var(--text-muted)" fontSize="10" textAnchor="end">{minWeight.toFixed(1)}</text>
+                                            <text x="35" y="55" fill="var(--text-muted)" fontSize="10" textAnchor="end">{maxWeight.toFixed(1)}</text>
+
+                                            <polyline
+                                                points={sortedHistory.map((record, idx) => {
+                                                    const weight = parseFloat(record.weightKg) || 0;
+                                                    const x = 50 + (idx / (sortedHistory.length - 1 || 1)) * 500;
+                                                    const y = 200 - (range > 0 ? ((weight - minWeight) / range) * 150 : 75);
+                                                    return `${x},${y}`;
+                                                }).join(' ')}
+                                                fill="none"
+                                                stroke="url(#lineGradient)"
+                                                strokeWidth="3"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            />
+
+                                            <defs>
+                                                <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                    <stop offset="0%" stopColor="var(--primary)" />
+                                                    <stop offset="100%" stopColor="var(--accent)" />
+                                                </linearGradient>
+                                            </defs>
+
+                                            {sortedHistory.map((record, idx) => {
+                                                const weight = parseFloat(record.weightKg) || 0;
+                                                const x = 50 + (idx / (sortedHistory.length - 1 || 1)) * 500;
+                                                const y = 200 - (range > 0 ? ((weight - minWeight) / range) * 150 : 75);
+                                                const date = new Date(record.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                                                return (
+                                                    <g key={idx}>
+                                                        <circle
+                                                            cx={x}
+                                                            cy={y}
+                                                            r="5"
+                                                            fill="var(--primary)"
+                                                            stroke="white"
+                                                            strokeWidth="2"
+                                                            className="data-point"
+                                                        >
+                                                            <title>{`${weight}kg on ${date}`}</title>
+                                                        </circle>
+                                                        <text x={x} y="220" fontSize="9" textAnchor="middle" fill="var(--text-muted)">{date}</text>
+                                                    </g>
+                                                );
+                                            })}
+                                        </svg>
+                                    </div>
+                                    <div className="history-stats">
+                                        <div className="stat-item">
+                                            <span className="stat-label">Sessions:</span>
+                                            <span className="stat-value">{sortedHistory.length}</span>
+                                        </div>
+                                        <div className="stat-item">
+                                            <span className="stat-label">Max:</span>
+                                            <span className="stat-value">{maxWeight ? `${maxWeight} kg` : 'N/A'}</span>
+                                        </div>
+                                        <div className="stat-item">
+                                            <span className="stat-label">Latest:</span>
+                                            <span className="stat-value">
+                                                {sortedHistory[sortedHistory.length - 1].weightKg ?
+                                                    `${sortedHistory[sortedHistory.length - 1].weightKg} kg` : 'N/A'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     // Calendar Helper Functions
     const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
     const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
@@ -859,6 +1050,12 @@ const AdminDashboard = () => {
                         User Plans
                     </button>
                     <button
+                        className={`tab-btn ${activeTab === 'exercise-history' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('exercise-history')}
+                    >
+                        Exercise History
+                    </button>
+                    <button
                         className={`tab-btn ${activeTab === 'exercises' ? 'active' : ''}`}
                         onClick={() => setActiveTab('exercises')}
                     >
@@ -974,6 +1171,8 @@ const AdminDashboard = () => {
                                 </ul>
                             </div>
                         )}
+
+                        {activeTab === 'exercise-history' && renderExerciseHistoryTab()}
 
                         {activeTab === 'create-user' && (
                             <div className="dash-card">
