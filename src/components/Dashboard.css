@@ -363,11 +363,6 @@
     /* Modern text wrapping */
 }
 
-.preview-item input[type="checkbox"] {
-    flex-shrink: 0;
-    /* Remove explicit margin if using gap */
-    margin-right: 0;
-}
 
 .btn-delete-ex {
     flex-shrink: 0;
@@ -519,12 +514,6 @@
     opacity: 0.5;
 }
 
-.exercise-item input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    accent-color: var(--primary);
-    cursor: pointer;
-}
 
 .ex-details {
     display: flex;
@@ -552,6 +541,51 @@
     overflow-wrap: break-word;
     white-space: normal; /* Allow text to wrap */
     max-width: 100%;
+}
+
+.exercise-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-left: auto;
+}
+
+.btn-complete {
+    background: var(--primary);
+    border: 1px solid var(--primary);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.btn-complete:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+}
+
+.btn-undone {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: var(--text-muted);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.btn-undone:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: var(--text-main);
 }
 
 .btn-video {
@@ -1374,18 +1408,27 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         order: 1;
     }
 
-    .exercise-item input[type="checkbox"] {
-        order: 0;
-    }
-
     .weight-inputs-container {
         order: 2;
         width: 100%;
     }
 
-    .btn-video {
+    .exercise-actions {
         order: 3;
         width: 100%;
+        margin-left: 0;
+        margin-top: 0.5rem;
+    }
+
+    .btn-video {
+        flex: 1;
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-complete,
+    .btn-undone {
+        flex: 1;
         padding: 0.5rem;
         font-size: 0.85rem;
     }

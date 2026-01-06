@@ -273,14 +273,6 @@ const UserDashboard = () => {
     const renderExerciseItem = (ex, idx, plan, itemKey, embedUrl) => (
         <div className="exercise-item-group">
             <div className="exercise-item">
-                <input
-                    type="checkbox"
-                    checked={ex.done}
-                    onChange={(e) => {
-                        e.stopPropagation();
-                        toggleExercise(plan.id, idx, ex.done);
-                    }}
-                />
                 <div className="ex-details">
                     <span className="ex-name">{ex.name}</span>
                     <span className="ex-meta">
@@ -332,17 +324,28 @@ const UserDashboard = () => {
                         </div>
                     </div>
                 )}
-                {embedUrl && (
+                <div className="exercise-actions">
                     <button
-                        className="btn-video"
+                        className={ex.done ? "btn-undone" : "btn-complete"}
                         onClick={(e) => {
                             e.stopPropagation();
-                            toggleVideo(itemKey);
+                            toggleExercise(plan.id, idx, ex.done);
                         }}
                     >
-                        {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
+                        {ex.done ? 'Undone' : 'Complete'}
                     </button>
-                )}
+                    {embedUrl && (
+                        <button
+                            className="btn-video"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                toggleVideo(itemKey);
+                            }}
+                        >
+                            {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* User Note Section */}
