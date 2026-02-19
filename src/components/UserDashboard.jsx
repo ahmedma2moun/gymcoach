@@ -450,12 +450,31 @@ const UserDashboard = () => {
             );
         }
 
+        // Monthly session stats
+        const monthPlans = plans.filter(p => {
+            const d = new Date(p.date);
+            return d.getFullYear() === year && d.getMonth() === month;
+        });
+        const completedSessions = monthPlans.filter(p => p.exercises.length > 0 && p.exercises.every(e => e.done)).length;
+        const totalPlanned = monthPlans.length;
+
         return (
             <div className="calendar-view">
                 <div className="calendar-controls">
                     <button onClick={handlePrevMonth} className="btn-small">&lt;</button>
                     <h3>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
                     <button onClick={handleNextMonth} className="btn-small">&gt;</button>
+                </div>
+                <div className="month-stats-bar">
+                    <div className="month-stat">
+                        <span className="month-stat-value completed">{completedSessions}</span>
+                        <span className="month-stat-label">Completed</span>
+                    </div>
+                    <div className="month-stat-divider"></div>
+                    <div className="month-stat">
+                        <span className="month-stat-value">{totalPlanned}</span>
+                        <span className="month-stat-label">Planned</span>
+                    </div>
                 </div>
                 <div className="calendar-grid">
                     <div className="calendar-day-header">Sun</div>
@@ -589,6 +608,170 @@ const UserDashboard = () => {
         );
     };
 
+    const renderAnalyticsTab = () => {
+        const completedPlans = plans.filter(p => p.exercises.length > 0 && p.exercises.every(e => e.done));
+
+        // A. Sessions by Training Type
+        const sessionsByType = {};
+        completedPlans.forEach(p => {
+            const title = p.title || 'Untitled';
+            sessionsByType[title] = (sessionsByType[title] || 0) + 1;
+        });
+        const sortedTypes = Object.entries(sessionsByType).sort((a, b) => b[1] - a[1]);
+        const maxTypeCount = sortedTypes.length > 0 ? sortedTypes[0][1] : 1;
+
+        // B. Monthly Overview
+        const now = new Date();
+        const currentMonthPlans = plans.filter(p => {
+            const d = new Date(p.date);
+            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        });
+        const currentMonthCompleted = currentMonthPlans.filter(p => p.exercises.length > 0 && p.exercises.every(e => e.done)).length;
+        const currentMonthTotal = currentMonthPlans.length;
+        const completionRate = currentMonthTotal > 0 ? Math.round((currentMonthCompleted / currentMonthTotal) * 100) : 0;
+        const totalExercisesThisMonth = currentMonthPlans.reduce((sum, p) => sum + p.exercises.filter(e => e.done).length, 0);
+
+        // C. Streaks
+        const completedDates = [...new Set(completedPlans.map(p => {
+            const d = new Date(p.date);
+            d.setHours(0, 0, 0, 0);
+            return d.getTime();
+        }))].sort((a, b) => b - a);
+
+        let currentStreak = 0;
+        if (completedDates.length > 0) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const oneDay = 86400000;
+            let checkDate = today.getTime();
+            // Allow starting from today or yesterday
+            if (completedDates.includes(checkDate)) {
+                currentStreak = 1;
+                checkDate -= oneDay;
+            } else {
+                checkDate -= oneDay;
+                if (completedDates.includes(checkDate)) {
+                    currentStreak = 1;
+                    checkDate -= oneDay;
+                }
+            }
+            while (completedDates.includes(checkDate)) {
+                currentStreak++;
+                checkDate -= oneDay;
+            }
+        }
+
+        let bestStreak = 0;
+        if (completedDates.length > 0) {
+            const sorted = [...completedDates].sort((a, b) => a - b);
+            let streak = 1;
+            for (let i = 1; i < sorted.length; i++) {
+                if (sorted[i] - sorted[i - 1] === 86400000) {
+                    streak++;
+                } else {
+                    bestStreak = Math.max(bestStreak, streak);
+                    streak = 1;
+                }
+            }
+            bestStreak = Math.max(bestStreak, streak);
+        }
+
+        // D. Recent Activity
+        const recentSessions = completedPlans
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 5);
+
+        return (
+            <div className="analytics-container">
+                {/* Sessions by Training Type */}
+                <div className="analytics-section">
+                    <h3 className="analytics-section-title">Sessions by Training Type</h3>
+                    {sortedTypes.length === 0 ? (
+                        <p className="analytics-empty">No completed sessions yet.</p>
+                    ) : (
+                        <div className="analytics-bars">
+                            {sortedTypes.map(([title, count]) => (
+                                <div key={title} className="analytics-bar-row">
+                                    <span className="analytics-bar-label">{title}</span>
+                                    <div className="analytics-bar-track">
+                                        <div
+                                            className="analytics-bar-fill"
+                                            style={{ width: `${(count / maxTypeCount) * 100}%` }}
+                                        ></div>
+                                    </div>
+                                    <span className="analytics-bar-count">{count}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Monthly Overview */}
+                <div className="analytics-section">
+                    <h3 className="analytics-section-title">
+                        {now.toLocaleString('default', { month: 'long' })} Overview
+                    </h3>
+                    <div className="analytics-stats-row">
+                        <div className="analytics-stat-card">
+                            <span className="analytics-stat-value">{completionRate}%</span>
+                            <span className="analytics-stat-label">Completion Rate</span>
+                            <div className="analytics-progress-track">
+                                <div className="analytics-progress-fill" style={{ width: `${completionRate}%` }}></div>
+                            </div>
+                        </div>
+                        <div className="analytics-stat-card">
+                            <span className="analytics-stat-value">{currentMonthCompleted}/{currentMonthTotal}</span>
+                            <span className="analytics-stat-label">Sessions Done</span>
+                        </div>
+                        <div className="analytics-stat-card">
+                            <span className="analytics-stat-value">{totalExercisesThisMonth}</span>
+                            <span className="analytics-stat-label">Exercises Completed</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Streaks & Consistency */}
+                <div className="analytics-section">
+                    <h3 className="analytics-section-title">Streaks & Consistency</h3>
+                    <div className="analytics-stats-row">
+                        <div className="analytics-stat-card">
+                            <span className="analytics-stat-value accent">{currentStreak}</span>
+                            <span className="analytics-stat-label">Current Streak (days)</span>
+                        </div>
+                        <div className="analytics-stat-card">
+                            <span className="analytics-stat-value">{bestStreak}</span>
+                            <span className="analytics-stat-label">Best Streak (days)</span>
+                        </div>
+                        <div className="analytics-stat-card">
+                            <span className="analytics-stat-value">{completedPlans.length}</span>
+                            <span className="analytics-stat-label">Total Sessions</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="analytics-section">
+                    <h3 className="analytics-section-title">Recent Activity</h3>
+                    {recentSessions.length === 0 ? (
+                        <p className="analytics-empty">No completed sessions yet.</p>
+                    ) : (
+                        <div className="analytics-recent-list">
+                            {recentSessions.map((plan, idx) => (
+                                <div key={idx} className="analytics-recent-item">
+                                    <div className="analytics-recent-date">
+                                        {new Date(plan.date).toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </div>
+                                    <div className="analytics-recent-title">{plan.title}</div>
+                                    <div className="analytics-recent-count">{plan.exercises.length} exercises</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="dashboard">
             <header className="dash-header">
@@ -603,6 +786,12 @@ const UserDashboard = () => {
                     onClick={() => setActiveTab('calendar')}
                 >
                     Workout Calendar
+                </button>
+                <button
+                    className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('analytics')}
+                >
+                    Analytics
                 </button>
                 <button
                     className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
@@ -620,6 +809,8 @@ const UserDashboard = () => {
             <div className="plans-container">
                 {activeTab === 'history' ? (
                     renderExerciseHistoryTab()
+                ) : activeTab === 'analytics' ? (
+                    renderAnalyticsTab()
                 ) : !selectedDate ? (
                     renderCalendar()
                 ) : (

@@ -893,12 +893,31 @@ const AdminDashboard = () => {
                 </div>
             );
         }
+        // Monthly session stats
+        const monthPlans = userPlans.filter(p => {
+            const d = new Date(p.date);
+            return d.getFullYear() === year && d.getMonth() === month;
+        });
+        const completedSessions = monthPlans.filter(p => p.exercises.length > 0 && p.exercises.every(e => e.done)).length;
+        const totalPlanned = monthPlans.length;
+
         return (
             <div className="calendar-view">
                 <div className="calendar-controls">
                     <button onClick={handlePrevMonth} className="btn-small">&lt;</button>
                     <h3>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
                     <button onClick={handleNextMonth} className="btn-small">&gt;</button>
+                </div>
+                <div className="month-stats-bar">
+                    <div className="month-stat">
+                        <span className="month-stat-value completed">{completedSessions}</span>
+                        <span className="month-stat-label">Completed</span>
+                    </div>
+                    <div className="month-stat-divider"></div>
+                    <div className="month-stat">
+                        <span className="month-stat-value">{totalPlanned}</span>
+                        <span className="month-stat-label">Planned</span>
+                    </div>
                 </div>
                 <div className="calendar-grid">
                     <div className="calendar-day-header">Sun</div>
