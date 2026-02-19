@@ -703,9 +703,9 @@ const UserDashboard = () => {
             bestStreak = Math.max(bestStreak, streak);
         }
 
-        // D. Recent Activity (for selected month)
-        const recentSessions = completedPlans
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
+        // D. Recent Activity (all-time)
+        const recentSessions = [...allCompleted]
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             .slice(0, 5);
 
         const monthLabel = new Date(selYear, selMon - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -797,7 +797,7 @@ const UserDashboard = () => {
                 <div className="analytics-section">
                     <h3 className="analytics-section-title">Recent Activity</h3>
                     {recentSessions.length === 0 ? (
-                        <p className="analytics-empty">No completed sessions in {monthLabel}.</p>
+                        <p className="analytics-empty">No completed sessions yet.</p>
                     ) : (
                         <div className="analytics-recent-list">
                             {recentSessions.map((plan, idx) => (
