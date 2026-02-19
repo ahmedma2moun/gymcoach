@@ -961,6 +961,37 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     font-size: 0.9rem;
 }
 
+/* Month Selector */
+.analytics-month-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.analytics-month-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.analytics-month-btn:hover {
+    border-color: var(--primary);
+    color: var(--text-main);
+}
+
+.analytics-month-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
+}
+
 /* Bar Chart */
 .analytics-bars {
     display: flex;
