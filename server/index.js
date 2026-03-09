@@ -263,7 +263,7 @@ app.get('/api/plans/user/:userId/exercise-history', async (req, res) => {
     try {
         const { userId } = req.params;
 
-        const plans = await Plan.find({ userId }).sort({ date: 1 }); // Sort by date ascending for chronological order
+        const plans = await Plan.find({ userId }).sort({ date: -1 }); // Sort by date descending — most recent first
 
         // Build a map: exerciseName -> array of { date, weightKg, weightLbs, weight, userNote }
         const historyMap = {};
