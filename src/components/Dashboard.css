@@ -743,6 +743,22 @@
 .calendar-day.status-completed-day .day-number { color: var(--success); }
 .calendar-day.status-missed-day .day-number { color: var(--danger); }
 
+/* Disabled past-empty days */
+.calendar-day.disabled-day {
+  opacity: 0.25;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Clone target highlight */
+.calendar-day.clone-target {
+  background: rgba(155, 93, 229, 0.08);
+  border-color: rgba(155, 93, 229, 0.3);
+  cursor: pointer;
+}
+
+.calendar-day.clone-target .day-number { color: var(--secondary); }
+
 /* ====================================================
    USER LIST
    ==================================================== */

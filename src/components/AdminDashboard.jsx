@@ -1449,6 +1449,7 @@ const AdminDashboard = () => {
                                 type="date"
                                 className="full-width"
                                 value={cloneDate}
+                                min={new Date().toISOString().split('T')[0]}
                                 onChange={(e) => setCloneDate(e.target.value)}
                                 style={{ marginBottom: '1.5rem' }}
                             />
