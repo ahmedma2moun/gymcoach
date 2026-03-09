@@ -500,7 +500,11 @@ const UserDashboard = () => {
             );
         }
 
-        const exerciseNames = Object.keys(exerciseHistory);
+        const exerciseNames = Object.keys(exerciseHistory).sort((a, b) => {
+            const latestA = Math.max(...exerciseHistory[a].map(h => new Date(h.date)));
+            const latestB = Math.max(...exerciseHistory[b].map(h => new Date(h.date)));
+            return latestB - latestA;
+        });
 
         if (exerciseNames.length === 0) {
             return <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '2rem' }}>No exercise history available yet. Complete some workouts to see your progress!</p>;

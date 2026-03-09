@@ -268,9 +268,11 @@ app.get('/api/plans/user/:userId/exercise-history', async (req, res) => {
         // Build a map: exerciseName -> array of { date, weightKg, weightLbs, weight, userNote }
         const historyMap = {};
 
+        const EXCLUDED_EXERCISES = ['Dynamic stretches', 'Static stretches'];
+
         for (const plan of plans) {
             for (const exercise of plan.exercises) {
-                if (exercise.done) {
+                if (exercise.done && !EXCLUDED_EXERCISES.includes(exercise.name)) {
                     if (!historyMap[exercise.name]) {
                         historyMap[exercise.name] = [];
                     }
