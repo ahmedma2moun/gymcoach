@@ -913,34 +913,17 @@ const AdminDashboard = () => {
     return (
         <div className="dashboard">
             <header className="dash-header">
-                <h1>Admin Dashboard</h1>
-                <button onClick={logout} className="btn btn-outline">Logout</button>
+                <div className="dash-header-left">
+                    <span className="dash-greeting">Coach Panel</span>
+                    <h1>Admin Dashboard</h1>
+                </div>
+                <button onClick={logout} className="dash-logout-btn">Logout</button>
             </header>
 
+            <div className="dash-body">
             <div className="admin-layout">
-                <div className="admin-tabs">
-                    <button
-                        className={`tab-btn ${activeTab === 'user-plans' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('user-plans')}
-                    >
-                        User Plans
-                    </button>
-                    <button
-                        className={`tab-btn ${activeTab === 'exercises' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('exercises')}
-                    >
-                        Exercise Library
-                    </button>
-                    <button
-                        className={`tab-btn ${activeTab === 'create-user' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('create-user')}
-                    >
-                        Create User
-                    </button>
-                </div>
-
                 {isLoading ? (
-                    <div className="loader-container">
+                    <div className="loader-container" style={{marginTop:'2rem'}}>
                         <div className="loader-spinner"></div>
                     </div>
                 ) : (
@@ -1079,6 +1062,29 @@ const AdminDashboard = () => {
 
                     </div>
                 )}
+            </div>
+            </div>{/* end dash-body */}
+
+            {/* Bottom Tab Navigation */}
+            <div className="admin-tabs">
+                <button
+                    className={`tab-btn ${activeTab === 'user-plans' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('user-plans')}
+                >
+                    Members
+                </button>
+                <button
+                    className={`tab-btn ${activeTab === 'exercises' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('exercises')}
+                >
+                    Exercises
+                </button>
+                <button
+                    className={`tab-btn ${activeTab === 'create-user' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('create-user')}
+                >
+                    Add User
+                </button>
             </div>
 
             {/* Progress Modal / Overlay */}

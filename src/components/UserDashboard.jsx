@@ -776,38 +776,15 @@ const UserDashboard = () => {
     return (
         <div className="dashboard">
             <header className="dash-header">
-                <h1>Welcome, {user?.username}</h1>
-                <button onClick={logout} className="btn btn-outline">Logout</button>
+                <div className="dash-header-left">
+                    <span className="dash-greeting">Welcome back</span>
+                    <h1>{user?.username}</h1>
+                </div>
+                <button onClick={logout} className="dash-logout-btn">Logout</button>
             </header>
 
-            {/* Tab Navigation */}
-            <div className="admin-tabs">
-                <button
-                    className={`tab-btn ${activeTab === 'calendar' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('calendar')}
-                >
-                    Workout Calendar
-                </button>
-                <button
-                    className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('analytics')}
-                >
-                    Analytics
-                </button>
-                <button
-                    className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
-                    onClick={() => {
-                        setActiveTab('history');
-                        if (Object.keys(exerciseHistory).length === 0) {
-                            fetchExerciseHistory();
-                        }
-                    }}
-                >
-                    Exercise History
-                </button>
-            </div>
-
-            <div className="plans-container">
+            <div className="dash-body">
+                <div className="plans-container">
                 {activeTab === 'history' ? (
                     renderExerciseHistoryTab()
                 ) : activeTab === 'analytics' ? (
@@ -816,7 +793,7 @@ const UserDashboard = () => {
                     renderCalendar()
                 ) : (
                     <div>
-                        <button onClick={() => setSelectedDate(null)} className="btn btn-outline mb-4">&larr; Back to Calendar ({selectedDate})</button>
+                        <button onClick={() => setSelectedDate(null)} className="btn btn-outline mb-4" style={{fontSize:'0.82rem'}}>← Back to Calendar</button>
 
                         {plans.filter(p => new Date(p.date).toDateString() === selectedDate).length === 0 ? (
                             <p>No plans for this date.</p>
@@ -913,6 +890,34 @@ const UserDashboard = () => {
                         )}
                     </div>
                 )}
+                </div>
+            </div>
+
+            {/* Bottom Tab Navigation */}
+            <div className="admin-tabs">
+                <button
+                    className={`tab-btn ${activeTab === 'calendar' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('calendar')}
+                >
+                    Calendar
+                </button>
+                <button
+                    className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('analytics')}
+                >
+                    Analytics
+                </button>
+                <button
+                    className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
+                    onClick={() => {
+                        setActiveTab('history');
+                        if (Object.keys(exerciseHistory).length === 0) {
+                            fetchExerciseHistory();
+                        }
+                    }}
+                >
+                    History
+                </button>
             </div>
         </div>
     );
