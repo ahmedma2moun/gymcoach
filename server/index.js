@@ -242,6 +242,7 @@ app.patch('/api/plans/:planId', async (req, res) => {
 
         if (plan.exercises[exerciseIndex]) {
             plan.exercises[exerciseIndex].done = done;
+            plan.exercises[exerciseIndex].completedAt = done ? new Date() : null;
             if (weight !== undefined) plan.exercises[exerciseIndex].weight = weight;
             if (weightKg !== undefined) plan.exercises[exerciseIndex].weightKg = weightKg;
             if (weightLbs !== undefined) plan.exercises[exerciseIndex].weightLbs = weightLbs;
@@ -278,7 +279,7 @@ app.get('/api/plans/user/:userId/exercise-history', async (req, res) => {
                     }
 
                     historyMap[exercise.name].push({
-                        date: plan.date,
+                        date: exercise.completedAt || plan.date,
                         weightKg: exercise.weightKg || '',
                         weightLbs: exercise.weightLbs || '',
                         weight: exercise.weight || '',

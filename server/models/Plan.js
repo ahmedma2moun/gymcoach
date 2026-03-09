@@ -12,6 +12,7 @@ const planSchema = new mongoose.Schema({
         reps: String,
         videoUrl: String,
         done: { type: Boolean, default: false },
+        completedAt: { type: Date, default: null },
         weight: { type: String, default: '' }, // Legacy field
         weightKg: { type: String, default: '' },
         weightLbs: { type: String, default: '' },
