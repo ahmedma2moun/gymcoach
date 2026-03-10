@@ -89,14 +89,10 @@ const UserDashboard = () => {
             });
 
             if (res.ok) {
-                await fetchPlans();
-                // Clear weights from state if marked done? logic was to clear.
-                // Keep note? Maybe clear note state too as it is saved.
+                const updatedPlan = await res.json();
+                setPlans(prev => prev.map(p => p.id === planId ? updatedPlan : p));
                 setExerciseWeights(prev => { const n = { ...prev }; delete n[key]; return n; });
                 setExerciseWeightsLbs(prev => { const n = { ...prev }; delete n[key]; return n; });
-                // setUserNotes(prev => { const n = {...prev}; delete n[key]; return n; }); // Allow keeping it visible?
-                // Actually, if we clear state, the input might empty unless we render from plan data.
-                // The plan data refreshes, so we should rely on plan.userNote if state is empty.
             }
         } catch (error) {
             console.error(error);
@@ -126,25 +122,30 @@ const UserDashboard = () => {
         return null;
     };
 
+    // Derive previous weights from already-fetched plans (server returns date-desc)
+    const derivePreviousWeights = (planList) => {
+        const weights = {};
+        for (const plan of planList) {
+            for (const exercise of plan.exercises) {
+                if (!exercise.done || weights[exercise.name]) continue;
+                const prev = parsePrevWeight(exercise);
+                if (prev) weights[exercise.name] = prev;
+            }
+        }
+        return weights;
+    };
+
+    // Keep previousWeights in sync whenever plans change
+    useEffect(() => {
+        setPreviousWeights(derivePreviousWeights(plans));
+    }, [plans]);
+
     const fetchPlans = async () => {
         setIsLoading(true);
         try {
-            const [plansRes, histRes] = await Promise.all([
-                fetch(`/api/plans/${user.id}`),
-                fetch(`/api/plans/user/${user.id}/exercise-history`),
-            ]);
-            const [data, histData] = await Promise.all([plansRes.json(), histRes.json()]);
+            const res = await fetch(`/api/plans/${user.id}`);
+            const data = await res.json();
             setPlans(data);
-
-            // Derive previous weight from the most-recent entry (server returns date-desc order)
-            const weights = {};
-            for (const [exerciseName, entries] of Object.entries(histData)) {
-                if (entries.length > 0) {
-                    const prev = parsePrevWeight(entries[0]);
-                    if (prev) weights[exerciseName] = prev;
-                }
-            }
-            setPreviousWeights(weights);
         } catch (error) {
             console.error("Failed to fetch plans:", error);
         } finally {
