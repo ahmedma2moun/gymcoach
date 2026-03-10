@@ -22,4 +22,7 @@ const planSchema = new mongoose.Schema({
     }]
 }, { timestamps: true });
 
+// Compound index: covers userId filter + date sort in a single index scan
+planSchema.index({ userId: 1, date: -1 });
+
 export default mongoose.model('Plan', planSchema);

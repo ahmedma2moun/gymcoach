@@ -183,26 +183,30 @@ app.put('/api/plans/:planId', async (req, res) => {
     }
 
     try {
-        const plan = await Plan.findOne({ id: req.params.planId });
+        const plan = await Plan.findOneAndUpdate(
+            { id: req.params.planId },
+            {
+                $set: {
+                    title,
+                    exercises: exercises.map(ex => ({
+                        name: ex.name,
+                        videoUrl: ex.videoUrl,
+                        sets: ex.sets,
+                        reps: ex.reps,
+                        weight: ex.weight || '',
+                        weightKg: ex.weightKg || '',
+                        weightLbs: ex.weightLbs || '',
+                        done: ex.done || false,
+                        completedAt: ex.completedAt || null,
+                        coachNote: ex.coachNote || '',
+                        userNote: ex.userNote || '',
+                        supersetId: ex.supersetId || null
+                    }))
+                }
+            },
+            { new: true }
+        );
         if (!plan) return res.status(404).json({ message: 'Plan not found' });
-
-        plan.title = title;
-        plan.exercises = exercises.map(ex => ({
-            name: ex.name,
-            videoUrl: ex.videoUrl,
-            sets: ex.sets,
-            reps: ex.reps,
-            weight: ex.weight || '',
-            weightKg: ex.weightKg || '',
-            weightLbs: ex.weightLbs || '',
-            done: ex.done || false,
-            completedAt: ex.completedAt || null,
-            coachNote: ex.coachNote || '',
-            userNote: ex.userNote || '',
-            supersetId: ex.supersetId || null
-        }));
-
-        await plan.save();
         res.json(plan);
     } catch (e) {
         console.error(e);
@@ -260,22 +264,22 @@ app.patch('/api/plans/:planId', async (req, res) => {
     }
 
     try {
-        const plan = await Plan.findOne({ id: req.params.planId });
-        if (!plan) return res.status(404).json({ message: 'Plan not found' });
+        const setFields = {
+            [`exercises.${exerciseIndex}.done`]: done,
+            [`exercises.${exerciseIndex}.completedAt`]: done ? new Date() : null,
+        };
+        if (weight !== undefined) setFields[`exercises.${exerciseIndex}.weight`] = weight;
+        if (weightKg !== undefined) setFields[`exercises.${exerciseIndex}.weightKg`] = weightKg;
+        if (weightLbs !== undefined) setFields[`exercises.${exerciseIndex}.weightLbs`] = weightLbs;
+        if (userNote !== undefined) setFields[`exercises.${exerciseIndex}.userNote`] = userNote;
 
-        if (exerciseIndex < 0 || exerciseIndex >= plan.exercises.length) {
-            return res.status(400).json({ message: 'Exercise index out of bounds' });
-        }
-
-        const exercise = plan.exercises[exerciseIndex];
-        exercise.done = done;
-        exercise.completedAt = done ? new Date() : null;
-        if (weight !== undefined) exercise.weight = weight;
-        if (weightKg !== undefined) exercise.weightKg = weightKg;
-        if (weightLbs !== undefined) exercise.weightLbs = weightLbs;
-        if (userNote !== undefined) exercise.userNote = userNote;
-
-        await plan.save();
+        // Filter ensures exerciseIndex exists — returns null if plan not found or index out of bounds
+        const plan = await Plan.findOneAndUpdate(
+            { id: req.params.planId, [`exercises.${exerciseIndex}`]: { $exists: true } },
+            { $set: setFields },
+            { new: true }
+        );
+        if (!plan) return res.status(404).json({ message: 'Plan not found or exercise index out of bounds' });
         res.json(plan);
     } catch (e) {
         console.error(e);
@@ -287,7 +291,9 @@ app.patch('/api/plans/:planId', async (req, res) => {
 app.get('/api/plans/user/:userId/exercise-history', async (req, res) => {
     try {
         const { userId } = req.params;
-        const plans = await Plan.find({ userId }).sort({ date: -1 });
+        const plans = await Plan.find({ userId })
+            .sort({ date: -1 })
+            .select('date exercises.name exercises.done exercises.completedAt exercises.weightKg exercises.weightLbs exercises.weight exercises.userNote -_id');
 
         const historyMap = {};
 
@@ -318,22 +324,26 @@ app.get('/api/plans/user/:userId/exercise-history', async (req, res) => {
 app.get('/api/plans/user/:userId/exercise-history/:exerciseName', async (req, res) => {
     try {
         const { userId, exerciseName } = req.params;
-        const plans = await Plan.find({ userId }).sort({ date: -1 });
 
-        for (const plan of plans) {
-            for (const exercise of plan.exercises) {
-                if (exercise.name !== exerciseName || !exercise.done) continue;
-
-                return res.json({
-                    weight: exercise.weight || null,
-                    weightKg: exercise.weightKg || null,
-                    weightLbs: exercise.weightLbs || null,
-                    lastComment: exercise.userNote || ''
-                });
+        // Aggregation pushes filtering into the DB — stops at first matching exercise
+        const [result] = await Plan.aggregate([
+            { $match: { userId: Number(userId) } },
+            { $sort: { date: -1 } },
+            { $unwind: '$exercises' },
+            { $match: { 'exercises.name': exerciseName, 'exercises.done': true } },
+            { $limit: 1 },
+            {
+                $project: {
+                    _id: 0,
+                    weight: { $ifNull: ['$exercises.weight', null] },
+                    weightKg: { $ifNull: ['$exercises.weightKg', null] },
+                    weightLbs: { $ifNull: ['$exercises.weightLbs', null] },
+                    lastComment: { $ifNull: ['$exercises.userNote', ''] }
+                }
             }
-        }
+        ]);
 
-        res.json({ weight: null, weightKg: null, weightLbs: null, lastComment: '' });
+        res.json(result ?? { weight: null, weightKg: null, weightLbs: null, lastComment: '' });
     } catch (e) {
         console.error(e);
         res.status(500).json({ message: 'Error fetching exercise history' });
