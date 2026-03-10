@@ -76,6 +76,7 @@ const Login = () => {
                         onChange={(e) => setUsername(e.target.value)}
                         autoCapitalize="none"
                         autoCorrect="off"
+                        autoFocus
                         required
                     />
                 </div>

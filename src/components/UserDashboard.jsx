@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import ExerciseLineChart from './ExerciseLineChart';
+import Toast from './Toast';
+import LoadingSpinner from './LoadingSpinner';
 import './Dashboard.css';
 
 const UserDashboard = () => {
@@ -15,7 +17,8 @@ const UserDashboard = () => {
 
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(null);
-    const [_isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
+    const [toast, setToast] = useState(null); // { message, type }
 
     // Exercise History Tab
     const [activeTab, setActiveTab] = useState('calendar'); // 'calendar', 'history', or 'analytics'
@@ -148,6 +151,7 @@ const UserDashboard = () => {
             setPlans(data);
         } catch (error) {
             console.error("Failed to fetch plans:", error);
+            setToast({ message: 'Failed to load plans. Please try again.', type: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -162,6 +166,7 @@ const UserDashboard = () => {
             setExerciseHistory(data);
         } catch (error) {
             console.error("Failed to fetch exercise history:", error);
+            setToast({ message: 'Failed to load exercise history.', type: 'error' });
         } finally {
             setHistoryLoading(false);
         }
@@ -205,17 +210,10 @@ const UserDashboard = () => {
     };
 
     const copyPlanToClipboard = (plan) => {
-        const exercisesText = plan.exercises.map(ex => {
-            return `Exercise Name: ${ex.name}\nSets: ${ex.sets}\nReps: ${ex.reps}\nYoutube link: ${ex.videoUrl || 'N/A'}\n`;
-        }).join('\n');
-
-        const fullText = `${plan.title}\n\n${exercisesText}`;
-
-        navigator.clipboard.writeText(fullText).then(() => {
-            alert('Plan copied to clipboard!');
-        }).catch(err => {
-            console.error('Failed to copy:', err);
-            alert('Failed to copy plan to clipboard');
+        import('../utils/planUtils').then(({ copyPlanToClipboard: copy }) => {
+            copy(plan).then(result => {
+                setToast({ message: result.message, type: result.ok ? 'success' : 'error' });
+            });
         });
     };
 
@@ -397,7 +395,7 @@ const UserDashboard = () => {
                 >
                     <span className="day-number">{day}</span>
                     {hasPlan && (
-                        dayPlans.map((p, i) => {
+                        dayPlans.map((p) => {
                             const isDone = p.exercises.every(e => e.done);
                             const pDate = new Date(p.date);
                             const today = new Date();
@@ -409,7 +407,7 @@ const UserDashboard = () => {
                             else if (pDate < today) statusClass = 'status-missed';
 
                             return (
-                                <div key={i} className={`plan-indicator ${statusClass}`} title={p.title}>
+                                <div key={p.id || p._id} className={`plan-indicator ${statusClass}`} title={p.title}>
                                     {p.title}
                                 </div>
                             );
@@ -533,16 +531,69 @@ const UserDashboard = () => {
         );
     };
 
-    const renderAnalyticsTab = () => {
-        // Build list of months that have plans, sorted newest first
+    // --- useMemo: available months derived from plans ---
+    const availableMonths = useMemo(() => {
         const monthsSet = new Set();
         plans.forEach(p => {
             const d = new Date(p.date);
             const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
             monthsSet.add(key);
         });
-        const availableMonths = [...monthsSet].sort((a, b) => b.localeCompare(a));
+        return [...monthsSet].sort((a, b) => b.localeCompare(a));
+    }, [plans]);
 
+    // --- useMemo: deduplicated completed-session timestamps for streak calculation ---
+    const completedDates = useMemo(() => {
+        const allCompleted = plans.filter(p => p.exercises.length > 0 && p.exercises.every(e => e.done));
+        return [...new Set(allCompleted.map(p => {
+            const d = new Date(p.date);
+            d.setHours(0, 0, 0, 0);
+            return d.getTime();
+        }))].sort((a, b) => b - a);
+    }, [plans]);
+
+    // --- useMemo: streak values ---
+    const { currentStreak, bestStreak } = useMemo(() => {
+        if (completedDates.length === 0) return { currentStreak: 0, bestStreak: 0 };
+
+        const oneDay = 86400000;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let streak = 0;
+        let checkDate = today.getTime();
+        if (completedDates.includes(checkDate)) {
+            streak = 1;
+            checkDate -= oneDay;
+        } else {
+            checkDate -= oneDay;
+            if (completedDates.includes(checkDate)) {
+                streak = 1;
+                checkDate -= oneDay;
+            }
+        }
+        while (completedDates.includes(checkDate)) {
+            streak++;
+            checkDate -= oneDay;
+        }
+
+        const sorted = [...completedDates].sort((a, b) => a - b);
+        let best = 0;
+        let run = 1;
+        for (let i = 1; i < sorted.length; i++) {
+            if (sorted[i] - sorted[i - 1] === oneDay) {
+                run++;
+            } else {
+                best = Math.max(best, run);
+                run = 1;
+            }
+        }
+        best = Math.max(best, run);
+
+        return { currentStreak: streak, bestStreak: best };
+    }, [completedDates]);
+
+    const renderAnalyticsTab = () => {
         // Default to most recent month if not set or invalid
         const selectedMonth = (analyticsMonth && availableMonths.includes(analyticsMonth))
             ? analyticsMonth
@@ -582,50 +633,8 @@ const UserDashboard = () => {
         const completionRate = monthTotal > 0 ? Math.round((monthCompleted / monthTotal) * 100) : 0;
         const totalExercises = monthPlans.reduce((sum, p) => sum + p.exercises.filter(e => e.done).length, 0);
 
-        // C. Streaks (all-time, not month-specific)
+        // C. All-time completed sessions
         const allCompleted = plans.filter(p => p.exercises.length > 0 && p.exercises.every(e => e.done));
-        const completedDates = [...new Set(allCompleted.map(p => {
-            const d = new Date(p.date);
-            d.setHours(0, 0, 0, 0);
-            return d.getTime();
-        }))].sort((a, b) => b - a);
-
-        let currentStreak = 0;
-        if (completedDates.length > 0) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const oneDay = 86400000;
-            let checkDate = today.getTime();
-            if (completedDates.includes(checkDate)) {
-                currentStreak = 1;
-                checkDate -= oneDay;
-            } else {
-                checkDate -= oneDay;
-                if (completedDates.includes(checkDate)) {
-                    currentStreak = 1;
-                    checkDate -= oneDay;
-                }
-            }
-            while (completedDates.includes(checkDate)) {
-                currentStreak++;
-                checkDate -= oneDay;
-            }
-        }
-
-        let bestStreak = 0;
-        if (completedDates.length > 0) {
-            const sorted = [...completedDates].sort((a, b) => a - b);
-            let streak = 1;
-            for (let i = 1; i < sorted.length; i++) {
-                if (sorted[i] - sorted[i - 1] === 86400000) {
-                    streak++;
-                } else {
-                    bestStreak = Math.max(bestStreak, streak);
-                    streak = 1;
-                }
-            }
-            bestStreak = Math.max(bestStreak, streak);
-        }
 
         // D. Recent Activity (all-time)
         const recentSessions = [...allCompleted]
@@ -724,8 +733,8 @@ const UserDashboard = () => {
                         <p className="analytics-empty">No completed sessions yet.</p>
                     ) : (
                         <div className="analytics-recent-list">
-                            {recentSessions.map((plan, idx) => (
-                                <div key={idx} className="analytics-recent-item">
+                            {recentSessions.map((plan) => (
+                                <div key={plan.id || plan._id} className="analytics-recent-item">
                                     <div className="analytics-recent-date">
                                         {new Date(plan.date).toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' })}
                                     </div>
@@ -742,6 +751,14 @@ const UserDashboard = () => {
 
     return (
         <div className="dashboard">
+            {isLoading && <LoadingSpinner overlay />}
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
             <header className="dash-header">
                 <div className="dash-header-left">
                     <span className="dash-greeting">Welcome back</span>
@@ -883,7 +900,7 @@ const UserDashboard = () => {
                         }
                     }}
                 >
-                    History
+                    History{historyLoading && <LoadingSpinner />}
                 </button>
             </div>
         </div>

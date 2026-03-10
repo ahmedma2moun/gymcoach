@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 
 const ExerciseLineChart = ({ sortedHistory, maxWeight, minWeight, range }) => {
     const [activeIdx, setActiveIdx] = useState(null);
@@ -90,4 +90,4 @@ const ExerciseLineChart = ({ sortedHistory, maxWeight, minWeight, range }) => {
     );
 };
 
-export default ExerciseLineChart;
+export default memo(ExerciseLineChart);

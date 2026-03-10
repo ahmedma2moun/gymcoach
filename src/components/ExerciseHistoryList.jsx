@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import ExerciseLineChart from './ExerciseLineChart';
 
 const ExerciseHistoryList = ({ exerciseHistory, loading, sortByLatest, emptyMessage }) => {
@@ -79,4 +80,4 @@ const ExerciseHistoryList = ({ exerciseHistory, loading, sortByLatest, emptyMess
     );
 };
 
-export default ExerciseHistoryList;
+export default memo(ExerciseHistoryList);

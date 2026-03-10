@@ -15,11 +15,17 @@ const Navbar = () => {
                     GYM<span className="text-primary">X</span>
                 </a>
 
-                <div className="menu-icon" onClick={toggleMenu}>
+                <button
+                    type="button"
+                    className="menu-icon"
+                    onClick={toggleMenu}
+                    aria-label="Toggle navigation menu"
+                    aria-expanded={isOpen}
+                >
                     <div className={isOpen ? "bar open" : "bar"}></div>
                     <div className={isOpen ? "bar open" : "bar"}></div>
                     <div className={isOpen ? "bar open" : "bar"}></div>
-                </div>
+                </button>
 
                 <ul className={isOpen ? "nav-links active" : "nav-links"}>
                     <li><a href="#home" onClick={() => setIsOpen(false)}>Home</a></li>

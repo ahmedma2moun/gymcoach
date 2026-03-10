@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 const AnalyticsView = ({ plans, analyticsMonth, setAnalyticsMonth, loading }) => {
     if (loading) {
         return (
@@ -190,8 +192,8 @@ const AnalyticsView = ({ plans, analyticsMonth, setAnalyticsMonth, loading }) =>
                     <p className="analytics-empty">No completed sessions yet.</p>
                 ) : (
                     <div className="analytics-recent-list">
-                        {recentSessions.map((plan, idx) => (
-                            <div key={idx} className="analytics-recent-item">
+                        {recentSessions.map((plan) => (
+                            <div key={plan.id || plan._id} className="analytics-recent-item">
                                 <div className="analytics-recent-date">
                                     {new Date(plan.date).toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' })}
                                 </div>
@@ -206,4 +208,4 @@ const AnalyticsView = ({ plans, analyticsMonth, setAnalyticsMonth, loading }) =>
     );
 };
 
-export default AnalyticsView;
+export default memo(AnalyticsView);

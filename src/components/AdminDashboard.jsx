@@ -3,6 +3,8 @@ import { useAuth } from './AuthContext';
 import AnalyticsView from './AnalyticsView';
 import ExerciseHistoryList from './ExerciseHistoryList';
 import { copyPlanToClipboard } from '../utils/planUtils';
+import Toast from './Toast';
+import LoadingSpinner from './LoadingSpinner';
 import './Dashboard.css';
 
 const AdminDashboard = () => {
@@ -39,6 +41,7 @@ const AdminDashboard = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [toast, setToast] = useState(null); // { message, type }
 
     // Exercise History State
     const [viewingHistoryUser, setViewingHistoryUser] = useState(null);
@@ -106,12 +109,13 @@ const AdminDashboard = () => {
             if (res.ok) {
                 setNewUser({ username: '', password: '' });
                 fetchUsers();
+                setToast({ message: 'User created successfully!', type: 'success' });
             } else {
-                alert('Error creating user');
+                setToast({ message: 'Error creating user', type: 'error' });
             }
         } catch (error) {
             console.error(error);
-            alert('Error creating user');
+            setToast({ message: 'Error creating user', type: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -416,7 +420,7 @@ const AdminDashboard = () => {
             });
 
             if (res.ok) {
-                alert(isEditing ? 'Plan updated!' : 'Plan created!');
+                setToast({ message: isEditing ? 'Plan updated!' : 'Plan created!', type: 'success' });
                 setPlanForm({ id: null, title: '', date: '', exercises: [] });
                 const plansRes = await fetch(`/api/plans/${viewingUser.id}`);
                 setUserPlans(await plansRes.json());
@@ -424,7 +428,7 @@ const AdminDashboard = () => {
             }
         } catch (error) {
             console.error(error);
-            alert('Error saving plan');
+            setToast({ message: 'Error saving plan', type: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -472,14 +476,13 @@ const AdminDashboard = () => {
                 body: JSON.stringify({ isActive: newStatus })
             });
             if (res.ok) {
-                // Update local state
                 setUsers(users.map(u => u.id === user.id ? { ...u, isActive: newStatus } : u));
             } else {
-                alert('Error updating user status');
+                setToast({ message: 'Error updating user status', type: 'error' });
             }
         } catch (error) {
             console.error(error);
-            alert('Error updating status');
+            setToast({ message: 'Error updating status', type: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -496,12 +499,13 @@ const AdminDashboard = () => {
 
             if (res.ok) {
                 setUserPlans(userPlans.filter(p => p.id !== planId));
+                setToast({ message: 'Plan deleted.', type: 'info' });
             } else {
-                alert('Error deleting plan');
+                setToast({ message: 'Error deleting plan', type: 'error' });
             }
         } catch (error) {
             console.error(error);
-            alert('Error deleting plan');
+            setToast({ message: 'Error deleting plan', type: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -509,7 +513,7 @@ const AdminDashboard = () => {
 
     const handleClonePlan = (plan) => {
         setCloningPlan(plan);
-        alert('Plan copied! Select a future date to paste it.');
+        setToast({ message: 'Plan copied! Select a future date to paste it.', type: 'info' });
         setSelectedDate(null); // Return to calendar to let user pick a date
     };
 
@@ -523,7 +527,7 @@ const AdminDashboard = () => {
 
     const executeClonePlanToUser = async () => {
         if (!targetUserId || !cloneDate) {
-            alert('Please select a user and date');
+            setToast({ message: 'Please select a user and date', type: 'info' });
             return;
         }
 
@@ -540,17 +544,17 @@ const AdminDashboard = () => {
             });
 
             if (res.ok) {
-                alert('Plan cloned successfully!');
+                setToast({ message: 'Plan cloned successfully!', type: 'success' });
                 setCloneToUserModal(false);
                 setPlanToClone(null);
                 setTargetUserId('');
                 setCloneDate('');
             } else {
-                alert('Error cloning plan');
+                setToast({ message: 'Error cloning plan', type: 'error' });
             }
         } catch (error) {
             console.error(error);
-            alert('Error cloning plan');
+            setToast({ message: 'Error cloning plan', type: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -634,7 +638,7 @@ const AdminDashboard = () => {
         if (cloningPlan && dateObj >= today) {
             // Restriction: Can only clone to empty days
             if (plansForDay.length > 0) {
-                alert('A plan already exists on this date. Please select an empty date.');
+                setToast({ message: 'A plan already exists on this date. Please select an empty date.', type: 'info' });
                 return;
             }
 
@@ -661,7 +665,7 @@ const AdminDashboard = () => {
                     body: JSON.stringify(newPlanBody)
                 });
                 if (res.ok) {
-                    alert('Plan cloned successfully!');
+                    setToast({ message: 'Plan cloned successfully!', type: 'success' });
                     setCloningPlan(null);
                     const plansRes = await fetch(`/api/plans/${viewingUser.id}`);
                     setUserPlans(await plansRes.json());
@@ -669,7 +673,7 @@ const AdminDashboard = () => {
                 }
             } catch (error) {
                 console.error(error);
-                alert('Error cloning plan');
+                setToast({ message: 'Error cloning plan', type: 'error' });
             } finally {
                 setIsLoading(false);
             }
@@ -764,7 +768,7 @@ const AdminDashboard = () => {
                 >
                     <span className="day-number">{day}</span>
                     {hasPlan && (
-                        dayPlans.map((p, i) => {
+                        dayPlans.map((p) => {
                             const isDone = p.exercises.every(e => e.done);
                             const pDate = new Date(p.date);
                             pDate.setHours(0, 0, 0, 0);
@@ -774,7 +778,7 @@ const AdminDashboard = () => {
                             else if (pDate < today) statusClass = 'status-missed';
 
                             return (
-                                <div key={i} className={`plan-indicator ${statusClass}`} title={p.title}>
+                                <div key={p.id || p._id} className={`plan-indicator ${statusClass}`} title={p.title}>
                                     {p.title}
                                 </div>
                             );
@@ -839,12 +843,13 @@ const AdminDashboard = () => {
             if (res.ok) {
                 setNewExercise({ name: '', videoUrl: '' });
                 fetchExercises();
+                setToast({ message: 'Exercise added!', type: 'success' });
             } else {
-                alert('Error creating exercise');
+                setToast({ message: 'Error creating exercise', type: 'error' });
             }
         } catch (error) {
             console.error(error);
-            alert('Error creating exercise');
+            setToast({ message: 'Error creating exercise', type: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -864,12 +869,13 @@ const AdminDashboard = () => {
             if (res.ok) {
                 setEditingExercise(null);
                 fetchExercises();
+                setToast({ message: 'Exercise updated!', type: 'success' });
             } else {
-                alert('Error updating exercise');
+                setToast({ message: 'Error updating exercise', type: 'error' });
             }
         } catch (error) {
             console.error(error);
-            alert('Error updating exercise');
+            setToast({ message: 'Error updating exercise', type: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -886,12 +892,13 @@ const AdminDashboard = () => {
 
             if (res.ok) {
                 fetchExercises();
+                setToast({ message: 'Exercise deleted.', type: 'info' });
             } else {
-                alert('Error deleting exercise');
+                setToast({ message: 'Error deleting exercise', type: 'error' });
             }
         } catch (error) {
             console.error(error);
-            alert('Error deleting exercise');
+            setToast({ message: 'Error deleting exercise', type: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -899,6 +906,14 @@ const AdminDashboard = () => {
 
     return (
         <div className="dashboard">
+            {isLoading && <LoadingSpinner overlay />}
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
             <header className="dash-header">
                 <div className="dash-header-left">
                     <span className="dash-greeting">Coach Panel</span>
@@ -1343,7 +1358,9 @@ const AdminDashboard = () => {
                                                             className="btn-small btn-copy"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                copyPlanToClipboard(plan);
+                                                                copyPlanToClipboard(plan).then(result => {
+                                                                    setToast({ message: result.message, type: result.ok ? 'success' : 'error' });
+                                                                });
                                                             }}
                                                             title="Copy to Clipboard"
                                                         >
@@ -1366,7 +1383,7 @@ const AdminDashboard = () => {
                                                         !isCollapsed && (
                                                             <div className="exercise-list">
                                                                 {plan.exercises.map((ex, i) => (
-                                                                    <div key={i} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
+                                                                    <div key={ex.name ? `${ex.name}-${i}` : i} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
                                                                         <div className="exercise-item">
                                                                             <input type="checkbox" checked={ex.done} readOnly />
                                                                             <div className="ex-details">
