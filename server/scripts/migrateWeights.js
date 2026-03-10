@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import Plan from '../models/Plan.js';
 import connectDB from '../db.js';

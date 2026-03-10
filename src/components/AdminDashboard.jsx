@@ -73,15 +73,25 @@ const AdminDashboard = () => {
     }, []);
 
     const fetchUsers = async () => {
-        const res = await fetch('/api/users');
-        const data = await res.json();
-        setUsers(data);
+        try {
+            const res = await fetch('/api/users');
+            if (!res.ok) throw new Error('Failed to fetch users');
+            const data = await res.json();
+            setUsers(data);
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     const fetchExercises = async () => {
-        const res = await fetch('/api/exercises');
-        const data = await res.json();
-        setExercises(data);
+        try {
+            const res = await fetch('/api/exercises');
+            if (!res.ok) throw new Error('Failed to fetch exercises');
+            const data = await res.json();
+            setExercises(data);
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     const handleCreateUser = async (e) => {
@@ -383,7 +393,7 @@ const AdminDashboard = () => {
     };
 
     const handleSavePlan = async () => {
-        if (!viewingUser || planForm.exercises.length === 0) return;
+        if (!viewingUser || !planForm.title.trim() || planForm.exercises.length === 0) return;
 
         setIsLoading(true);
         try {
@@ -407,13 +417,9 @@ const AdminDashboard = () => {
 
             if (res.ok) {
                 alert(isEditing ? 'Plan updated!' : 'Plan created!');
-                setPlanForm({ id: null, title: '', date: '', exercises: [] }); // Reset form
-                // Refresh plans
-                await fetch(`/api/plans/${viewingUser.id}`)
-                    .then(res => res.json())
-                    .then(data => setUserPlans(data));
-
-                // Return to calendar view instead of closing modal or staying on form
+                setPlanForm({ id: null, title: '', date: '', exercises: [] });
+                const plansRes = await fetch(`/api/plans/${viewingUser.id}`);
+                setUserPlans(await plansRes.json());
                 setSelectedDate(null);
             }
         } catch (error) {
@@ -490,10 +496,6 @@ const AdminDashboard = () => {
 
             if (res.ok) {
                 setUserPlans(userPlans.filter(p => p.id !== planId));
-                // Also close details if open for this plan
-                if (activeTab === 'users' && selectedDate) {
-                    // Force refresh or just let the filtering handle it
-                }
             } else {
                 alert('Error deleting plan');
             }
@@ -506,7 +508,6 @@ const AdminDashboard = () => {
     };
 
     const handleClonePlan = (plan) => {
-
         setCloningPlan(plan);
         alert('Plan copied! Select a future date to paste it.');
         setSelectedDate(null); // Return to calendar to let user pick a date
@@ -570,12 +571,7 @@ const AdminDashboard = () => {
 
     const handleViewExerciseHistory = async (user) => {
         setViewingHistoryUser(user);
-        setHistoryLoading(true);
-        try {
-            await fetchExerciseHistory(user.id);
-        } catch (error) {
-            console.error("Failed to fetch exercise history:", error);
-        }
+        await fetchExerciseHistory(user.id);
     };
 
     const closeHistoryView = () => {
@@ -644,7 +640,7 @@ const AdminDashboard = () => {
 
             const newPlanBody = {
                 userId: viewingUser.id,
-                title: `${cloningPlan.title}`,
+                title: cloningPlan.title,
                 date: dateStr,
                 exercises: cloningPlan.exercises.map(ex => ({
                     name: ex.name,
@@ -667,12 +663,9 @@ const AdminDashboard = () => {
                 if (res.ok) {
                     alert('Plan cloned successfully!');
                     setCloningPlan(null);
-                    // Refresh plans
-                    await fetch(`/api/plans/${viewingUser.id}`)
-                        .then(res => res.json())
-                        .then(data => setUserPlans(data));
-
-                    setSelectedDate(null); // Close modal to show updated calendar
+                    const plansRes = await fetch(`/api/plans/${viewingUser.id}`);
+                    setUserPlans(await plansRes.json());
+                    setSelectedDate(null);
                 }
             } catch (error) {
                 console.error(error);
@@ -747,19 +740,15 @@ const AdminDashboard = () => {
             // ... existing status logic ...
             if (hasPlan) {
                 const hasMissed = dayPlans.some(p => {
-                    const isDone = p.exercises.every(e => e.done);
                     const pDate = new Date(p.date);
-                    const t = new Date(); t.setHours(0, 0, 0, 0);
                     pDate.setHours(0, 0, 0, 0);
-                    return !isDone && pDate < t;
+                    return !p.exercises.every(e => e.done) && pDate < today;
                 });
 
                 const hasPending = dayPlans.some(p => {
-                    const isDone = p.exercises.every(e => e.done);
                     const pDate = new Date(p.date);
-                    const t = new Date(); t.setHours(0, 0, 0, 0);
                     pDate.setHours(0, 0, 0, 0);
-                    return !isDone && pDate >= t;
+                    return !p.exercises.every(e => e.done) && pDate >= today;
                 });
 
                 if (hasMissed) dayStatusClass = 'status-missed-day';
@@ -778,8 +767,6 @@ const AdminDashboard = () => {
                         dayPlans.map((p, i) => {
                             const isDone = p.exercises.every(e => e.done);
                             const pDate = new Date(p.date);
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
                             pDate.setHours(0, 0, 0, 0);
 
                             let statusClass = 'status-pending';
@@ -935,38 +922,36 @@ const AdminDashboard = () => {
                                     {users.filter(u => u.role !== 'admin').map(u => (
                                         <li key={u.id} className="user-item">
                                             <span>{u.username} <small>({u.role})</small></span>
-                                            {u.role !== 'admin' && (
-                                                <div className="user-actions">
-                                                    <button
-                                                        className={`btn-small ${u.isActive !== false ? 'btn-deactivate' : 'btn-activate'}`} // Default to active if undefined
-                                                        onClick={() => handleToggleStatus(u)}
-                                                        title={u.isActive !== false ? 'Deactivate User' : 'Activate User'}
-                                                    >
-                                                        {u.isActive !== false ? '🚫' : '✅'}
-                                                    </button>
-                                                    <button
-                                                        className="btn-small btn-view"
-                                                        onClick={() => handleViewProgress(u)}
-                                                        title="View Progress"
-                                                    >
-                                                        📅
-                                                    </button>
-                                                    <button
-                                                        className="btn-small btn-view"
-                                                        onClick={() => handleViewExerciseHistory(u)}
-                                                        title="Exercise History"
-                                                    >
-                                                        📊
-                                                    </button>
-                                                    <button
-                                                        className="btn-small btn-view"
-                                                        onClick={() => handleViewAnalytics(u)}
-                                                        title="Analytics"
-                                                    >
-                                                        📈
-                                                    </button>
-                                                </div>
-                                            )}
+                                            <div className="user-actions">
+                                                <button
+                                                    className={`btn-small ${u.isActive !== false ? 'btn-deactivate' : 'btn-activate'}`}
+                                                    onClick={() => handleToggleStatus(u)}
+                                                    title={u.isActive !== false ? 'Deactivate User' : 'Activate User'}
+                                                >
+                                                    {u.isActive !== false ? '🚫' : '✅'}
+                                                </button>
+                                                <button
+                                                    className="btn-small btn-view"
+                                                    onClick={() => handleViewProgress(u)}
+                                                    title="View Progress"
+                                                >
+                                                    📅
+                                                </button>
+                                                <button
+                                                    className="btn-small btn-view"
+                                                    onClick={() => handleViewExerciseHistory(u)}
+                                                    title="Exercise History"
+                                                >
+                                                    📊
+                                                </button>
+                                                <button
+                                                    className="btn-small btn-view"
+                                                    onClick={() => handleViewAnalytics(u)}
+                                                    title="Analytics"
+                                                >
+                                                    📈
+                                                </button>
+                                            </div>
                                         </li>
                                     ))}
                                 </ul>
@@ -1322,13 +1307,12 @@ const AdminDashboard = () => {
                                     {userPlans.filter(p => new Date(p.date).toDateString() === selectedDate).length === 0 ? (
                                         <p>No plans for this date.</p>
                                     ) : (
-                                        userPlans.filter(p => new Date(p.date).toDateString() === selectedDate).map((plan, idx) => {
+                                        userPlans.filter(p => new Date(p.date).toDateString() === selectedDate).map((plan) => {
                                             const isCompleted = plan.exercises.every(e => e.done);
-                                            // Always expand in detail view for simplicity, or manage state
                                             const isCollapsed = expandedPlans[plan.id] === undefined ? false : !expandedPlans[plan.id];
 
                                             return (
-                                                <div key={idx} className={`plan-card ${isCompleted ? 'completed-plan' : ''}`}>
+                                                <div key={plan.id} className={`plan-card ${isCompleted ? 'completed-plan' : ''}`}>
                                                     <div className="plan-header" onClick={() => toggleExpand(plan.id, isCollapsed)}>
                                                         <h3>
                                                             {plan.title}

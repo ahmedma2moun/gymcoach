@@ -15,7 +15,7 @@ const UserDashboard = () => {
 
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [_isLoading, setIsLoading] = useState(true);
 
     // Exercise History Tab
     const [activeTab, setActiveTab] = useState('calendar'); // 'calendar', 'history', or 'analytics'
@@ -42,7 +42,7 @@ const UserDashboard = () => {
         return '';
     };
 
-    const toggleExercise = async (planId, exerciseIndex, currentStatus, userNoteValue = null) => {
+    const toggleExercise = async (planId, exerciseIndex, currentStatus, _userNoteValue = null) => {
         const key = `${planId}-${exerciseIndex}`;
 
         // If toggling status, use state. If saving note only, use passed value or state.
@@ -764,7 +764,7 @@ const UserDashboard = () => {
                         {plans.filter(p => new Date(p.date).toDateString() === selectedDate).length === 0 ? (
                             <p>No plans for this date.</p>
                         ) : (
-                            plans.filter(p => new Date(p.date).toDateString() === selectedDate).map((plan, pIdx) => {
+                            plans.filter(p => new Date(p.date).toDateString() === selectedDate).map((plan) => {
                                 const isCompleted = plan.exercises.length > 0 && plan.exercises.every(ex => ex.done);
 
                                 let isCollapsed;
