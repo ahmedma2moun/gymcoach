@@ -105,79 +105,45 @@ const UserDashboard = () => {
         }
     };
 
-    const fetchPreviousWeight = async (exerciseName) => {
-        try {
-            const res = await fetch(`/api/plans/user/${user.id}/exercise-history/${encodeURIComponent(exerciseName)}`);
-            const data = await res.json();
-            // Data structure: { weight, weightKg, weightLbs, lastComment }
-            const result = { lastComment: data.lastComment };
-
-            if (data.weightKg || data.weightLbs) {
-                result.kg = data.weightKg;
-                result.lbs = data.weightLbs;
-                return result;
-            }
-            if (data.weight) {
-                const val = parseFloat(data.weight);
-                if (!isNaN(val)) {
-                    result.kg = data.weight;
-                    result.lbs = (val * 2.20462).toFixed(1);
-                    return result;
-                }
-                result.raw = data.weight;
-                return result;
-            }
-            // Return at least the comment if exists, or null if absolutely nothing
-            if (result.lastComment) return result;
-            return null;
-        } catch (e) {
-            return null;
+    const parsePrevWeight = (entry) => {
+        const result = { lastComment: entry.userNote || '' };
+        if (entry.weightKg || entry.weightLbs) {
+            result.kg = entry.weightKg;
+            result.lbs = entry.weightLbs;
+            return result;
         }
+        if (entry.weight) {
+            const val = parseFloat(entry.weight);
+            if (!isNaN(val)) {
+                result.kg = entry.weight;
+                result.lbs = (val * 2.20462).toFixed(1);
+                return result;
+            }
+            result.raw = entry.weight;
+            return result;
+        }
+        if (result.lastComment) return result;
+        return null;
     };
-    // ... (rest of functions like handleWeightChange kept the same from previous step, logic holds) ... 
-
-    // We need to verify where fetchPreviousWeight usage is and update it.
-    // In fetchPlans (Line 36), it expects a return value.
-    // In render (Line 317), it expects 'previousWeights[ex.name]' to be consumable.
-
-    /* 
-       NOTE: We need to update fetchPlans to handle the object return from fetchPreviousWeight.
-       I will inject the updated fetchPlans here as well to be safe.
-    */
 
     const fetchPlans = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch(`/api/plans/${user.id}`);
-            const data = await res.json();
+            const [plansRes, histRes] = await Promise.all([
+                fetch(`/api/plans/${user.id}`),
+                fetch(`/api/plans/user/${user.id}/exercise-history`),
+            ]);
+            const [data, histData] = await Promise.all([plansRes.json(), histRes.json()]);
             setPlans(data);
 
-            // Collect unique exercise names that need previous weight data
-            const uniqueExercises = new Set();
-            for (const plan of data) {
-                for (const exercise of plan.exercises) {
-                    if (!exercise.done) {
-                        uniqueExercises.add(exercise.name);
-                    }
+            // Derive previous weight from the most-recent entry (server returns date-desc order)
+            const weights = {};
+            for (const [exerciseName, entries] of Object.entries(histData)) {
+                if (entries.length > 0) {
+                    const prev = parsePrevWeight(entries[0]);
+                    if (prev) weights[exerciseName] = prev;
                 }
             }
-
-            // Fetch all previous weights in parallel
-            const weightPromises = Array.from(uniqueExercises).map(async (exerciseName) => {
-                const prev = await fetchPreviousWeight(exerciseName);
-                return { exerciseName, prev };
-            });
-
-            const weightResults = await Promise.all(weightPromises);
-
-            // Build weights object from results
-            const weights = {};
-            weightResults.forEach(({ exerciseName, prev }) => {
-                if (prev) {
-                    weights[exerciseName] = prev;
-                }
-            });
-
             setPreviousWeights(weights);
         } catch (error) {
             console.error("Failed to fetch plans:", error);

@@ -166,6 +166,11 @@
   overflow: hidden;
 }
 
+.modal-content.dash-card {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 .dash-card h2 {
   font-size: 1.05rem;
   font-weight: 700;
