@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        BigInt   @id
+  username  String   @unique
+  password  String
+  role      String   @default("user")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  plans     Plan[]
+
+  @@map("users")
+}
+
+model Exercise {
+  id       BigInt @id
+  name     String
+  videoUrl String @default("") @map("video_url")
+
+  @@map("exercises")
+}
+
+model Plan {
+  id        BigInt         @id
+  userId    BigInt         @map("user_id")
+  title     String
+  date      DateTime?
+  status    String         @default("active")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+  user      User           @relation(fields: [userId], references: [id])
+  exercises PlanExercise[]
+
+  @@index([userId, date(sort: Desc)])
+  @@map("plans")
+}
+
+model PlanExercise {
+  id            Int       @id @default(autoincrement())
+  planId        BigInt    @map("plan_id")
+  exerciseOrder Int       @map("exercise_order")
+  name          String    @default("")
+  sets          String    @default("")
+  reps          String    @default("")
+  videoUrl      String    @default("") @map("video_url")
+  done          Boolean   @default(false)
+  completedAt   DateTime? @map("completed_at")
+  weight        String    @default("")
+  weightKg      String    @default("") @map("weight_kg")
+  weightLbs     String    @default("") @map("weight_lbs")
+  coachNote     String    @default("") @map("coach_note")
+  userNote      String    @default("") @map("user_note")
+  supersetId    String?   @map("superset_id")
+  plan          Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, exerciseOrder])
+  @@map("plan_exercises")
+}

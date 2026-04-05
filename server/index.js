@@ -1,10 +1,9 @@
 import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
-import connectDB from './db.js';
-import User from './models/User.js';
-import Plan from './models/Plan.js';
-import Exercise from './models/Exercise.js';
+import { User } from './models/User.js';
+import { Plan } from './models/Plan.js';
+import { Exercise } from './models/Exercise.js';
 
 const app = express();
 const PORT = 3000;
@@ -15,16 +14,6 @@ const EXCLUDED_EXERCISES = ['Dynamic stretches', 'Static stretches'];
 app.use(cors());
 app.use(express.json());
 
-// Ensure DB is connected before handling any request (serverless cold-start safe)
-app.use(async (_req, _res, next) => {
-    try {
-        await connectDB();
-        next();
-    } catch (e) {
-        next(e);
-    }
-});
-
 // --- Auth ---
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
@@ -33,27 +22,21 @@ app.post('/api/login', async (req, res) => {
     }
 
     try {
-        // Escape regex metacharacters to prevent injection
-        const escaped = username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const user = await User.findOne({
-            username: { $regex: new RegExp(`^${escaped}$`, 'i') }
-        });
-
+        const user = await User.findByUsernameCI(username);
         if (!user) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        // Check active status before expensive bcrypt comparison
         if (user.isActive === false) {
             return res.status(403).json({ message: 'Account is deactivated' });
         }
 
-        const isMatch = await user.comparePassword(password);
+        const isMatch = await User.comparePassword(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        const { password: _, ...userWithoutPass } = user.toObject();
+        const { password: _, ...userWithoutPass } = user;
         res.json(userWithoutPass);
     } catch (e) {
         console.error(e);
@@ -64,7 +47,7 @@ app.post('/api/login', async (req, res) => {
 // --- Users (Admin only) ---
 app.get('/api/users', async (_req, res) => {
     try {
-        const users = await User.find({}, '-password');
+        const users = await User.findAll();
         res.json(users);
     } catch (e) {
         console.error(e);
@@ -79,25 +62,13 @@ app.post('/api/users', async (req, res) => {
     }
 
     try {
-        const existingUser = await User.findOne({ username });
-        if (existingUser) {
+        const existing = await User.findByUsername(username);
+        if (existing) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        const newUser = await User.create({
-            id: Date.now(),
-            username,
-            password,
-            role,
-            isActive: true
-        });
-
-        res.status(201).json({
-            id: newUser.id,
-            username: newUser.username,
-            role: newUser.role,
-            isActive: newUser.isActive
-        });
+        const newUser = await User.create({ id: Date.now(), username, password, role, isActive: true });
+        res.status(201).json(newUser);
     } catch (e) {
         console.error(e);
         res.status(500).json({ message: 'Error creating user' });
@@ -111,12 +82,7 @@ app.patch('/api/users/:id/status', async (req, res) => {
     }
 
     try {
-        const user = await User.findOneAndUpdate(
-            { id: req.params.id },
-            { isActive },
-            { new: true }
-        ).select('-password');
-
+        const user = await User.updateStatus(Number(req.params.id), isActive);
         if (!user) return res.status(404).json({ message: 'User not found' });
         res.json(user);
     } catch (e) {
@@ -128,7 +94,7 @@ app.patch('/api/users/:id/status', async (req, res) => {
 // --- Plans ---
 app.get('/api/plans/:userId', async (req, res) => {
     try {
-        const plans = await Plan.find({ userId: req.params.userId }).sort({ date: -1 });
+        const plans = await Plan.findByUserId(Number(req.params.userId));
         res.json(plans);
     } catch (e) {
         console.error(e);
@@ -165,7 +131,7 @@ app.post('/api/plans', async (req, res) => {
 
 app.delete('/api/plans/:planId', async (req, res) => {
     try {
-        const result = await Plan.deleteOne({ id: req.params.planId });
+        const result = await Plan.deleteById(Number(req.params.planId));
         if (result.deletedCount === 0) {
             return res.status(404).json({ message: 'Plan not found' });
         }
@@ -183,29 +149,23 @@ app.put('/api/plans/:planId', async (req, res) => {
     }
 
     try {
-        const plan = await Plan.findOneAndUpdate(
-            { id: req.params.planId },
-            {
-                $set: {
-                    title,
-                    exercises: exercises.map(ex => ({
-                        name: ex.name,
-                        videoUrl: ex.videoUrl,
-                        sets: ex.sets,
-                        reps: ex.reps,
-                        weight: ex.weight || '',
-                        weightKg: ex.weightKg || '',
-                        weightLbs: ex.weightLbs || '',
-                        done: ex.done || false,
-                        completedAt: ex.completedAt || null,
-                        coachNote: ex.coachNote || '',
-                        userNote: ex.userNote || '',
-                        supersetId: ex.supersetId || null
-                    }))
-                }
-            },
-            { new: true }
-        );
+        const plan = await Plan.updateById(Number(req.params.planId), {
+            title,
+            exercises: exercises.map(ex => ({
+                name: ex.name,
+                videoUrl: ex.videoUrl,
+                sets: ex.sets,
+                reps: ex.reps,
+                weight: ex.weight || '',
+                weightKg: ex.weightKg || '',
+                weightLbs: ex.weightLbs || '',
+                done: ex.done || false,
+                completedAt: ex.completedAt || null,
+                coachNote: ex.coachNote || '',
+                userNote: ex.userNote || '',
+                supersetId: ex.supersetId || null
+            }))
+        });
         if (!plan) return res.status(404).json({ message: 'Plan not found' });
         res.json(plan);
     } catch (e) {
@@ -222,18 +182,18 @@ app.post('/api/plans/clone', async (req, res) => {
     }
 
     try {
-        const originalPlan = await Plan.findOne({ id: planId });
-        if (!originalPlan) {
+        const original = await Plan.findById(Number(planId));
+        if (!original) {
             return res.status(404).json({ message: 'Original plan not found' });
         }
 
         const newPlan = await Plan.create({
             id: Date.now(),
             userId: targetUserId,
-            title: originalPlan.title,
+            title: original.title,
             date,
             status: 'active',
-            exercises: originalPlan.exercises.map(ex => ({
+            exercises: original.exercises.map(ex => ({
                 name: ex.name,
                 videoUrl: ex.videoUrl,
                 sets: ex.sets,
@@ -264,20 +224,10 @@ app.patch('/api/plans/:planId', async (req, res) => {
     }
 
     try {
-        const setFields = {
-            [`exercises.${exerciseIndex}.done`]: done,
-            [`exercises.${exerciseIndex}.completedAt`]: done ? new Date() : null,
-        };
-        if (weight !== undefined) setFields[`exercises.${exerciseIndex}.weight`] = weight;
-        if (weightKg !== undefined) setFields[`exercises.${exerciseIndex}.weightKg`] = weightKg;
-        if (weightLbs !== undefined) setFields[`exercises.${exerciseIndex}.weightLbs`] = weightLbs;
-        if (userNote !== undefined) setFields[`exercises.${exerciseIndex}.userNote`] = userNote;
-
-        // Filter ensures exerciseIndex exists — returns null if plan not found or index out of bounds
-        const plan = await Plan.findOneAndUpdate(
-            { id: req.params.planId, [`exercises.${exerciseIndex}`]: { $exists: true } },
-            { $set: setFields },
-            { new: true }
+        const plan = await Plan.updateExercise(
+            Number(req.params.planId),
+            exerciseIndex,
+            { done, weight, weightKg, weightLbs, userNote }
         );
         if (!plan) return res.status(404).json({ message: 'Plan not found or exercise index out of bounds' });
         res.json(plan);
@@ -290,27 +240,19 @@ app.patch('/api/plans/:planId', async (req, res) => {
 // Get all exercise history for a user (for history tab with graphs)
 app.get('/api/plans/user/:userId/exercise-history', async (req, res) => {
     try {
-        const { userId } = req.params;
-        const plans = await Plan.find({ userId })
-            .sort({ date: -1 })
-            .select('date exercises.name exercises.done exercises.completedAt exercises.weightKg exercises.weightLbs exercises.weight exercises.userNote -_id');
+        const rows = await Plan.getExerciseHistoryRows(Number(req.params.userId));
 
         const historyMap = {};
-
-        for (const plan of plans) {
-            for (const exercise of plan.exercises) {
-                if (!exercise.done || EXCLUDED_EXERCISES.includes(exercise.name)) continue;
-
-                if (!historyMap[exercise.name]) historyMap[exercise.name] = [];
-
-                historyMap[exercise.name].push({
-                    date: exercise.completedAt || plan.date,
-                    weightKg: exercise.weightKg || '',
-                    weightLbs: exercise.weightLbs || '',
-                    weight: exercise.weight || '',
-                    userNote: exercise.userNote || ''
-                });
-            }
+        for (const row of rows) {
+            if (!row.done || EXCLUDED_EXERCISES.includes(row.name)) continue;
+            if (!historyMap[row.name]) historyMap[row.name] = [];
+            historyMap[row.name].push({
+                date: row.completed_at || row.date,
+                weightKg: row.weight_kg || '',
+                weightLbs: row.weight_lbs || '',
+                weight: row.weight || '',
+                userNote: row.user_note || ''
+            });
         }
 
         res.json(historyMap);
@@ -323,26 +265,10 @@ app.get('/api/plans/user/:userId/exercise-history', async (req, res) => {
 // Get previous weight and note for a specific exercise
 app.get('/api/plans/user/:userId/exercise-history/:exerciseName', async (req, res) => {
     try {
-        const { userId, exerciseName } = req.params;
-
-        // Aggregation pushes filtering into the DB — stops at first matching exercise
-        const [result] = await Plan.aggregate([
-            { $match: { userId: Number(userId) } },
-            { $sort: { date: -1 } },
-            { $unwind: '$exercises' },
-            { $match: { 'exercises.name': exerciseName, 'exercises.done': true } },
-            { $limit: 1 },
-            {
-                $project: {
-                    _id: 0,
-                    weight: { $ifNull: ['$exercises.weight', null] },
-                    weightKg: { $ifNull: ['$exercises.weightKg', null] },
-                    weightLbs: { $ifNull: ['$exercises.weightLbs', null] },
-                    lastComment: { $ifNull: ['$exercises.userNote', ''] }
-                }
-            }
-        ]);
-
+        const result = await Plan.getLastExercise(
+            Number(req.params.userId),
+            req.params.exerciseName
+        );
         res.json(result ?? { weight: null, weightKg: null, weightLbs: null, lastComment: '' });
     } catch (e) {
         console.error(e);
@@ -353,7 +279,7 @@ app.get('/api/plans/user/:userId/exercise-history/:exerciseName', async (req, re
 // --- Exercise Library ---
 app.get('/api/exercises', async (_req, res) => {
     try {
-        const exercises = await Exercise.find({}).sort({ name: 1 });
+        const exercises = await Exercise.findAll();
         res.json(exercises);
     } catch (e) {
         console.error(e);
@@ -368,11 +294,7 @@ app.post('/api/exercises', async (req, res) => {
     }
 
     try {
-        const newExercise = await Exercise.create({
-            id: Date.now(),
-            name,
-            videoUrl: videoUrl || ''
-        });
+        const newExercise = await Exercise.create({ id: Date.now(), name, videoUrl: videoUrl || '' });
         res.status(201).json(newExercise);
     } catch (e) {
         console.error(e);
@@ -387,12 +309,7 @@ app.put('/api/exercises/:id', async (req, res) => {
     }
 
     try {
-        const exercise = await Exercise.findOneAndUpdate(
-            { id: req.params.id },
-            { name, videoUrl },
-            { new: true }
-        );
-
+        const exercise = await Exercise.updateById(Number(req.params.id), { name, videoUrl: videoUrl || '' });
         if (!exercise) return res.status(404).json({ message: 'Exercise not found' });
         res.json(exercise);
     } catch (e) {
@@ -403,7 +320,7 @@ app.put('/api/exercises/:id', async (req, res) => {
 
 app.delete('/api/exercises/:id', async (req, res) => {
     try {
-        const result = await Exercise.deleteOne({ id: req.params.id });
+        const result = await Exercise.deleteById(Number(req.params.id));
         if (result.deletedCount === 0) {
             return res.status(404).json({ message: 'Exercise not found' });
         }
@@ -417,8 +334,7 @@ app.delete('/api/exercises/:id', async (req, res) => {
 // Create default admin account on first boot (lazy, non-blocking)
 const ensureAdmin = async () => {
     try {
-        await connectDB();
-        const admin = await User.findOne({ username: 'admin' });
+        const admin = await User.findByUsername('admin');
         if (!admin) {
             await User.create({ id: 1, username: 'admin', password: 'admin', role: 'admin', isActive: true });
             console.log('Default admin created — change this password immediately!');
@@ -427,7 +343,6 @@ const ensureAdmin = async () => {
         console.error('ensureAdmin failed:', e.message);
     }
 };
-ensureAdmin();
 
 // Export app for Vercel serverless
 export default app;
@@ -435,6 +350,7 @@ export default app;
 // Start local server when run directly
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);
 if (isMain) {
+    ensureAdmin();
     app.listen(PORT, () => {
         console.log(`Server running on http://localhost:${PORT}`);
     });
