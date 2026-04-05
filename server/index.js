@@ -5,6 +5,9 @@ import { User } from './models/User.js';
 import { Plan } from './models/Plan.js';
 import { Exercise } from './models/Exercise.js';
 
+// Prisma returns BIGINT columns as BigInt — teach JSON how to serialize them
+BigInt.prototype.toJSON = function () { return this.toString(); };
+
 const app = express();
 const PORT = 3000;
 
