@@ -4,6 +4,7 @@ import cors from 'cors';
 import { User } from './models/User.js';
 import { Plan } from './models/Plan.js';
 import { Exercise } from './models/Exercise.js';
+import { runExportJob } from './export/job.js';
 
 // Prisma returns BIGINT columns as BigInt — teach JSON how to serialize them
 BigInt.prototype.toJSON = function () { return this.toString(); };
@@ -346,6 +347,45 @@ const ensureAdmin = async () => {
         console.error('ensureAdmin failed:', e.message);
     }
 };
+
+// ---------------------------------------------------------------------------
+// GET /api/export/run
+// Triggers the daily export job on demand.
+//
+// Security: requires one of:
+//   Authorization: Bearer <CRON_SECRET>        — set automatically by Vercel Cron
+//   Authorization: Bearer <EXPORT_TRIGGER_SECRET> — for manual HTTP invocations
+//
+// Returns 202 immediately; job runs async so Vercel's 60 s function limit
+// is not an issue for the HTTP response (job logs go to stdout).
+// ---------------------------------------------------------------------------
+app.get('/api/export/run', async (req, res) => {
+    const authHeader = req.headers.authorization || '';
+    const cronSecret = process.env.CRON_SECRET;
+    const triggerSecret = process.env.EXPORT_TRIGGER_SECRET;
+
+    const authorized =
+        (cronSecret    && authHeader === `Bearer ${cronSecret}`)    ||
+        (triggerSecret && authHeader === `Bearer ${triggerSecret}`);
+
+    if (!authorized) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const correlationId = Date.now().toString(36);
+    res.status(202).json({ accepted: true, correlationId });
+
+    // Fire-and-forget so the HTTP response is not blocked by the job duration
+    runExportJob({ correlationId }).catch(err => {
+        console.error(JSON.stringify({
+            ts: new Date().toISOString(),
+            correlationId,
+            level: 'error',
+            msg: 'export job error after 202',
+            error: err.message,
+        }));
+    });
+});
 
 // Export app for Vercel serverless
 export default app;

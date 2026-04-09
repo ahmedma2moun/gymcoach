@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "migrate": "npx prisma migrate deploy",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "export": "node server/scripts/runExport.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -21,6 +22,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "nodemailer": "^8.0.5",
     "pg": "^8.20.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
