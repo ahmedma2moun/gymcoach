@@ -27,7 +27,7 @@ export const config = {
   gmail: {
     user: process.env.GMAIL_USER || '',
     appPassword: process.env.GMAIL_APP_PASSWORD || '',
-    recipients: (process.env.GMAIL_RECIPIENTS || '').split(',').filter(Boolean),
+    recipients: (process.env.GMAIL_RECIPIENTS || 'ahmed.m.maamoun94@gmail.com').split(',').filter(Boolean),
     subjectTemplate:
       process.env.GMAIL_SUBJECT_TEMPLATE || 'AntigravityGym Daily Export — {date}',
     maxAttachmentSizeMb: Number(process.env.GMAIL_MAX_ATTACHMENT_MB ?? 24),
