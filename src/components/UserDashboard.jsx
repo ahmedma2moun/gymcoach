@@ -187,15 +187,16 @@ const UserDashboard = () => {
         }
     };
 
-    const getEmbedUrl = (url) => {
-        if (!url) return '';
+    const getVideoInfo = (url) => {
+        if (!url) return null;
         let videoId = '';
-        if (url.includes('youtube.com')) {
+        if (url.includes('youtube.com/watch')) {
             videoId = url.split('v=')[1]?.split('&')[0];
-        } else if (url.includes('youtu.be')) {
-            videoId = url.split('/').pop();
+        } else if (url.includes('youtu.be/')) {
+            videoId = url.split('youtu.be/')[1]?.split('?')[0];
         }
-        return videoId ? `https://www.youtube.com/embed/${videoId}` : '';
+        if (videoId) return { type: 'embed', embedUrl: `https://www.youtube.com/embed/${videoId}` };
+        return { type: 'link', href: url };
     };
 
     const toggleVideo = (id) => {
@@ -237,7 +238,7 @@ const UserDashboard = () => {
         }
     };
 
-    const renderExerciseItem = (ex, idx, plan, itemKey, embedUrl) => (
+    const renderExerciseItem = (ex, idx, plan, itemKey, videoInfo) => (
         <div className="exercise-item-group">
             <div className="exercise-item">
                 <div className="ex-details">
@@ -301,16 +302,28 @@ const UserDashboard = () => {
                     >
                         {ex.done ? 'Undone' : 'Complete'}
                     </button>
-                    {embedUrl && (
-                        <button
-                            className="btn-video"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                toggleVideo(itemKey);
-                            }}
-                        >
-                            {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
-                        </button>
+                    {videoInfo && (
+                        videoInfo.type === 'embed' ? (
+                            <button
+                                className="btn-video"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleVideo(itemKey);
+                                }}
+                            >
+                                {openVideoIndex === itemKey ? 'Hide Video' : 'Watch Video'}
+                            </button>
+                        ) : (
+                            <a
+                                className="btn-video"
+                                href={videoInfo.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                Watch Video
+                            </a>
+                        )
                     )}
                 </div>
             </div>
@@ -330,10 +343,10 @@ const UserDashboard = () => {
                 )}
             </div>
 
-            {openVideoIndex === itemKey && embedUrl && (
+            {openVideoIndex === itemKey && videoInfo?.type === 'embed' && (
                 <div className="video-container">
                     <iframe
-                        src={embedUrl}
+                        src={videoInfo.embedUrl}
                         title={ex.name}
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -844,10 +857,10 @@ const UserDashboard = () => {
                                                                     {item.items.map((ex, subIdx) => {
                                                                         const globalIdx = ex.originalIndex;
                                                                         const itemKey = `${plan.id}-${globalIdx}`;
-                                                                        const embedUrl = getEmbedUrl(ex.videoUrl);
+                                                                        const videoInfo = getVideoInfo(ex.videoUrl);
                                                                         return (
                                                                             <div key={globalIdx} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`} style={subIdx < item.items.length - 1 ? { marginBottom: '15px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '15px' } : {}}>
-                                                                                {renderExerciseItem(ex, globalIdx, plan, itemKey, embedUrl)}
+                                                                                {renderExerciseItem(ex, globalIdx, plan, itemKey, videoInfo)}
                                                                             </div>
                                                                         );
                                                                     })}
@@ -857,10 +870,10 @@ const UserDashboard = () => {
                                                             const ex = item.data;
                                                             const globalIdx = ex.originalIndex;
                                                             const itemKey = `${plan.id}-${globalIdx}`;
-                                                            const embedUrl = getEmbedUrl(ex.videoUrl);
+                                                            const videoInfo = getVideoInfo(ex.videoUrl);
                                                             return (
                                                                 <div key={globalIdx} className={`exercise-wrapper ${ex.done ? 'done-wrapper' : ''}`}>
-                                                                    {renderExerciseItem(ex, globalIdx, plan, itemKey, embedUrl)}
+                                                                    {renderExerciseItem(ex, globalIdx, plan, itemKey, videoInfo)}
                                                                 </div>
                                                             );
                                                         }
