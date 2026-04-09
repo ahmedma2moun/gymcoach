@@ -7,6 +7,10 @@ import { config } from './config.js';
 //   Google Account → Security → 2-Step Verification → App passwords
 // ---------------------------------------------------------------------------
 function buildTransporter() {
+  console.log('[gmail] buildTransporter — user:', config.gmail.user || '(not set)');
+  console.log('[gmail] buildTransporter — appPassword set:', !!config.gmail.appPassword);
+  console.log('[gmail] buildTransporter — recipients:', config.gmail.recipients);
+
   if (!config.gmail.user || !config.gmail.appPassword) {
     throw new Error(
       'Gmail credentials are not configured. Set GMAIL_USER and GMAIL_APP_PASSWORD.',
@@ -79,15 +83,27 @@ export async function sendExportNotification({
 
   const subject = config.gmail.subjectTemplate.replace('{date}', date);
 
-  await transporter.sendMail({
-    from: config.gmail.user,
-    to: config.gmail.recipients.join(', '),
-    subject,
-    html: buildSuccessHtml({ date, rowCount, tableCount, sizeBytes, attachmentNote }),
-    attachments: attach
-      ? [{ filename: fileName, path: filePath, contentType: mimeType }]
-      : [],
-  });
+  console.log('[gmail] sendExportNotification — subject:', subject);
+  console.log('[gmail] sendExportNotification — to:', config.gmail.recipients.join(', '));
+  console.log('[gmail] sendExportNotification — attach file:', attach, '| size:', formatBytes(sizeBytes));
+
+  try {
+    const info = await transporter.sendMail({
+      from: config.gmail.user,
+      to: config.gmail.recipients.join(', '),
+      subject,
+      html: buildSuccessHtml({ date, rowCount, tableCount, sizeBytes, attachmentNote }),
+      attachments: attach
+        ? [{ filename: fileName, path: filePath, contentType: mimeType }]
+        : [],
+    });
+    console.log('[gmail] sendExportNotification — sent OK, messageId:', info.messageId);
+  } catch (err) {
+    console.error('[gmail] sendExportNotification — FAILED:', err.message);
+    console.error('[gmail] sendExportNotification — error code:', err.code);
+    console.error('[gmail] sendExportNotification — response:', err.response);
+    throw err;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -96,10 +112,20 @@ export async function sendExportNotification({
 export async function sendAlertEmail({ date, error }) {
   const transporter = buildTransporter();
 
-  await transporter.sendMail({
-    from: config.gmail.user,
-    to: config.gmail.recipients.join(', '),
-    subject: `ALERT: AntigravityGym Export Failed — ${date}`,
-    html: buildFailureHtml({ date, error }),
-  });
+  console.log('[gmail] sendAlertEmail — date:', date, '| error:', error.message);
+
+  try {
+    const info = await transporter.sendMail({
+      from: config.gmail.user,
+      to: config.gmail.recipients.join(', '),
+      subject: `ALERT: AntigravityGym Export Failed — ${date}`,
+      html: buildFailureHtml({ date, error }),
+    });
+    console.log('[gmail] sendAlertEmail — sent OK, messageId:', info.messageId);
+  } catch (err) {
+    console.error('[gmail] sendAlertEmail — FAILED:', err.message);
+    console.error('[gmail] sendAlertEmail — error code:', err.code);
+    console.error('[gmail] sendAlertEmail — response:', err.response);
+    throw err;
+  }
 }
