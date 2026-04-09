@@ -356,8 +356,8 @@ const ensureAdmin = async () => {
 //   Authorization: Bearer <CRON_SECRET>        — set automatically by Vercel Cron
 //   Authorization: Bearer <EXPORT_TRIGGER_SECRET> — for manual HTTP invocations
 //
-// Returns 202 immediately; job runs async so Vercel's 60 s function limit
-// is not an issue for the HTTP response (job logs go to stdout).
+// Awaits the job before responding so all logs are flushed before Vercel
+// closes the function. Returns 200 on success, 500 on failure.
 // ---------------------------------------------------------------------------
 app.get('/api/export/run', async (req, res) => {
     const authHeader = req.headers.authorization || '';
@@ -373,18 +373,13 @@ app.get('/api/export/run', async (req, res) => {
     }
 
     const correlationId = Date.now().toString(36);
-    res.status(202).json({ accepted: true, correlationId });
 
-    // Fire-and-forget so the HTTP response is not blocked by the job duration
-    runExportJob({ correlationId }).catch(err => {
-        console.error(JSON.stringify({
-            ts: new Date().toISOString(),
-            correlationId,
-            level: 'error',
-            msg: 'export job error after 202',
-            error: err.message,
-        }));
-    });
+    try {
+        const result = await runExportJob({ correlationId });
+        return res.status(200).json(result);
+    } catch (err) {
+        return res.status(500).json({ error: err.message, correlationId });
+    }
 });
 
 // Export app for Vercel serverless
