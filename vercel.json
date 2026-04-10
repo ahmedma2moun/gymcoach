@@ -2,7 +2,7 @@
     "crons": [
         {
             "path": "/api/export/run",
-            "schedule": "0 22 * * *"
+            "schedule": "40 8 * * *"
         }
     ],
     "rewrites": [

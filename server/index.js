@@ -364,8 +364,11 @@ app.get('/api/export/run', async (req, res) => {
     const cronSecret = process.env.CRON_SECRET;
     const triggerSecret = process.env.EXPORT_TRIGGER_SECRET;
 
+    const isVercelCron = req.headers['x-vercel-cron'] === '1';
+
     const authorized =
-        (cronSecret    && authHeader === `Bearer ${cronSecret}`)    ||
+        isVercelCron                                                     ||
+        (cronSecret    && authHeader === `Bearer ${cronSecret}`)         ||
         (triggerSecret && authHeader === `Bearer ${triggerSecret}`);
 
     if (!authorized) {
