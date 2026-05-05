@@ -23,31 +23,43 @@ export default function TabLayout() {
         tabBarLabelStyle: { fontSize: 11 },
       }}
     >
-      {/* Member: My Plans */}
+      {/* ── Member tabs ──────────────────────────────────────────── */}
+
       <Tabs.Screen
-        name="plans"
+        name="calendar"
         options={{
           href: isAdmin ? null : undefined,
-          title: 'My Plans',
+          title: 'Calendar',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="barbell-outline" color={color} size={size} />
+            <Ionicons name="calendar-outline" color={color} size={size} />
           ),
         }}
       />
 
-      {/* Member: History */}
+      <Tabs.Screen
+        name="analytics"
+        options={{
+          href: isAdmin ? null : undefined,
+          title: 'Analytics',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="bar-chart-outline" color={color} size={size} />
+          ),
+        }}
+      />
+
       <Tabs.Screen
         name="history"
         options={{
           href: isAdmin ? null : undefined,
-          title: 'Progress',
+          title: 'History',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="stats-chart-outline" color={color} size={size} />
           ),
         }}
       />
 
-      {/* Admin: Members */}
+      {/* ── Admin tabs ───────────────────────────────────────────── */}
+
       <Tabs.Screen
         name="members"
         options={{
@@ -59,28 +71,33 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Admin: Exercise Library */}
       <Tabs.Screen
-        name="library"
+        name="exercises"
         options={{
           href: !isAdmin ? null : undefined,
-          title: 'Library',
+          title: 'Exercises',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list-outline" color={color} size={size} />
+            <Ionicons name="barbell-outline" color={color} size={size} />
           ),
         }}
       />
 
-      {/* Both: Profile */}
       <Tabs.Screen
-        name="profile"
+        name="users"
         options={{
-          title: 'Profile',
+          href: !isAdmin ? null : undefined,
+          title: 'Users',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" color={color} size={size} />
+            <Ionicons name="person-circle-outline" color={color} size={size} />
           ),
         }}
       />
+
+      {/* ── Hidden legacy screens (still routable, not shown as tabs) ── */}
+
+      <Tabs.Screen name="plans" options={{ href: null }} />
+      <Tabs.Screen name="library" options={{ href: null }} />
+      <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   );
 }
