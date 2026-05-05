@@ -48,11 +48,6 @@ jobs:
       - name: Download IPA
         run: curl -L "$IPA_URL" -o app-preview.ipa
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
@@ -61,4 +56,5 @@ jobs:
           firebase appdistribution:distribute app-preview.ipa \
             --app "1:277213797095:ios:59faa7e10b4f22d5a92042" \
             --groups ios \
+            --token "${{ secrets.FIREBASE_TOKEN }}" \
             --release-notes "Commit ${{ github.sha }} — ${{ github.event.head_commit.message }}"
