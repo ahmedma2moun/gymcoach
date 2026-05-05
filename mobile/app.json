@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "Antigravity Gym",
+    "slug": "antigravity-gym",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "antigravitygym",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0d0d12"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.gym.coach"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0d0d12"
+      },
+      "permissions": [
+        "android.permission.INTERNET"
+      ],
+      "package": "com.gym.coach"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiBaseUrl": "https://gymcoach.vercel.app",
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "7f7fc3fb-35b8-4305-afe7-d1760f217b59"
+      }
+    },
+    "owner": "ahmdma2mou"
+  }
+}
