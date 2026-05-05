@@ -30,13 +30,19 @@ jobs:
         working-directory: mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --profile preview --platform ios --non-interactive
+
+      - name: Get IPA download URL
+        working-directory: mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          BUILD_JSON=$(eas build \
-            --profile preview \
+          IPA_URL=$(eas build:list \
             --platform ios \
+            --status finished \
+            --limit 1 \
             --non-interactive \
-            --json 2>/dev/null)
-          IPA_URL=$(echo "$BUILD_JSON" | jq -r '.[0].artifacts.buildUrl')
+            --json | jq -r '.[0].artifacts.buildUrl')
           echo "IPA_URL=$IPA_URL" >> $GITHUB_ENV
 
       - name: Download IPA
