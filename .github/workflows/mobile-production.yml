@@ -48,10 +48,17 @@ jobs:
       - name: Download IPA
         run: curl -L "$IPA_URL" -o app-preview.ipa
 
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
       - name: Distribute via Firebase App Distribution
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
-        with:
-          appId: "1:277213797095:ios:59faa7e10b4f22d5a92042"
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          file: app-preview.ipa
-          releaseNotes: "Auto-build from commit ${{ github.sha }} — ${{ github.event.head_commit.message }}"
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > /tmp/sa.json
+          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
+          firebase appdistribution:distribute app-preview.ipa \
+            --app "1:277213797095:ios:59faa7e10b4f22d5a92042" \
+            --groups ios \
+            --release-notes "Commit ${{ github.sha }} — ${{ github.event.head_commit.message }}"
+          rm /tmp/sa.json
