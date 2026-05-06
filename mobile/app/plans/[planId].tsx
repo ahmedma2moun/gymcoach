@@ -28,7 +28,7 @@ export default function PlanDetailScreen() {
   const { data: plans, isRefreshing, refresh } = usePlans(targetUserId);
   const navigation = useNavigation();
 
-  const plan = plans?.find((p) => p.id === planId);
+  const plan = plans?.find((p) => String(p.id) === planId);
 
   // Set the header title once plan is loaded
   useLayoutEffect(() => {

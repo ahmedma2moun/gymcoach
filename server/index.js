@@ -251,11 +251,11 @@ app.get('/api/plans/user/:userId/exercise-history', async (req, res) => {
             if (!row.done || EXCLUDED_EXERCISES.includes(row.name)) continue;
             if (!historyMap[row.name]) historyMap[row.name] = [];
             historyMap[row.name].push({
-                date: row.completed_at || row.date,
-                weightKg: row.weight_kg || '',
-                weightLbs: row.weight_lbs || '',
+                date: row.completedAt || row.plan?.date,
+                weightKg: row.weightKg || '',
+                weightLbs: row.weightLbs || '',
                 weight: row.weight || '',
-                userNote: row.user_note || ''
+                userNote: row.userNote || ''
             });
         }
 
