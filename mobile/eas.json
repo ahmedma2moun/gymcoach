@@ -42,7 +42,6 @@
   "submit": {
     "testflight": {
       "ios": {
-        "ascAppId": "3YC4L83GPY",
         "ascApiKeyIssuerId": "$(ASC_ISSUER_ID)",
         "ascApiKeyId": "$(ASC_KEY_ID)",
         "ascApiKeyPath": "/tmp/asc_key.p8"
