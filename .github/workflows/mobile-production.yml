@@ -52,7 +52,7 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-        run: eas submit --platform ios --profile production --non-interactive --latest
+        run: eas submit --platform ios --profile testflight --non-interactive --latest
 
       - name: Clean up API key
         if: always()
