@@ -30,6 +30,7 @@ jobs:
         working-directory: mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_BUILD_NO_EXPO_GO_WARNING: "true"
         run: eas build --profile production --platform ios --non-interactive --wait
 
       - name: Write App Store Connect API key
