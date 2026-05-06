@@ -30,9 +30,17 @@ jobs:
         working-directory: mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EAS_BUILD_NO_EXPO_GO_WARNING: "true"
-        run: eas build --profile production --platform ios --non-interactive --wait
-
+        run: |
+          eas build \
+            --profile testflight \
+            --platform ios \
+            --non-interactive \
+            --json \
+            --no-wait > /tmp/eas-build.json
+          cat /tmp/eas-build.json
+          BUILD_ID=$(jq -r '.[0].id // .id' /tmp/eas-build.json)
+          echo "BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
+          echo "Build queued: $BUILD_ID"
       - name: Write App Store Connect API key
         run: |
           echo "${{ secrets.ASC_KEY_P8_BASE64 }}" | base64 --decode > /tmp/asc_key.p8
