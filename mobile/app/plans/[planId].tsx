@@ -1,10 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import {
   ScrollView,
   RefreshControl,
   View,
   Text,
-  Alert,
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
@@ -16,7 +15,6 @@ import { apiFetch } from '@/src/api/client';
 import { ExerciseItem } from '@/src/components/ExerciseItem';
 import { Badge, EmptyState } from '@/src/components/ui';
 import { colors } from '@/src/theme/colors';
-import type { Plan } from '@/src/types/api';
 
 export default function PlanDetailScreen() {
   const { planId, userId: queryUserId } = useLocalSearchParams<{ planId: string; userId?: string }>();
@@ -80,9 +78,6 @@ export default function PlanDetailScreen() {
   const done = plan.exercises.filter((e) => e.done).length;
   const total = plan.exercises.length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-
-  // Group by supersetId for visual rendering
-  const supersets = new Set(plan.exercises.map((e) => e.supersetId).filter(Boolean));
 
   return (
     <ScrollView

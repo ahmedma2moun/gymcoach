@@ -26,5 +26,14 @@
         "buildType": "app-bundle"
       }
     }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascApiKeyIssuerId": "$(ASC_ISSUER_ID)",
+        "ascApiKeyId": "$(ASC_KEY_ID)",
+        "ascApiKeyPath": "/tmp/asc_key.p8"
+      }
+    }
   }
 }

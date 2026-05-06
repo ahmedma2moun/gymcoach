@@ -97,7 +97,15 @@ export default function TabLayout() {
 
       <Tabs.Screen name="plans" options={{ href: null }} />
       <Tabs.Screen name="library" options={{ href: null }} />
-      <Tabs.Screen name="profile" options={{ href: null }} />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" color={color} size={size} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

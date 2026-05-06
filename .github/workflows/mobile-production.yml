@@ -1,11 +1,11 @@
-name: iOS Auto-Publish
+name: iOS → TestFlight
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-and-distribute:
-    name: EAS Build → Firebase Distribution (iOS)
+  build-and-submit:
+    name: EAS Build → TestFlight
     runs-on: ubuntu-latest
 
     steps:
@@ -26,21 +26,25 @@ jobs:
       - name: Install EAS CLI
         run: npm install -g eas-cli
 
-      - name: Build IPA via EAS
+      - name: Build IPA via EAS (production)
         working-directory: mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: eas build --profile preview --platform ios --non-interactive
+        run: eas build --profile production --platform ios --non-interactive --wait
 
-      - name: Get IPA download URL
+      - name: Write App Store Connect API key
+        run: |
+          echo "${{ secrets.ASC_KEY_P8_BASE64 }}" | base64 --decode > /tmp/asc_key.p8
+          chmod 600 /tmp/asc_key.p8
+
+      - name: Submit to TestFlight via EAS
         working-directory: mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          IPA_URL=$(eas build:list \
-            --platform ios \
-            --status finished \
-            --limit 1 \
-            --non-interactive \
-            --json | jq -r '.[0].artifacts.buildUrl')
-          echo "IPA_URL=$IPA_URL" >> $GITHUB_ENV
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: eas submit --platform ios --profile production --non-interactive --latest
+
+      - name: Clean up API key
+        if: always()
+        run: rm -f /tmp/asc_key.p8

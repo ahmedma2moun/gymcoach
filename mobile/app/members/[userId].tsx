@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   FlatList,
   RefreshControl,
@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { useLayoutEffect } from 'react';
@@ -21,10 +22,18 @@ import { usePlans } from '@/src/hooks/usePlans';
 import { useLibrary } from '@/src/hooks/useLibrary';
 import { useUsers } from '@/src/hooks/useUsers';
 import { apiFetch } from '@/src/api/client';
-import { PlanCard, } from '@/src/components/PlanCard';
+import { PlanCard } from '@/src/components/PlanCard';
 import { EmptyState, Button } from '@/src/components/ui';
 import { colors } from '@/src/theme/colors';
-import type { LibraryExercise } from '@/src/types/api';
+import type { LibraryExercise, Plan } from '@/src/types/api';
+
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+const SCREEN_W = Dimensions.get('window').width;
+const CELL_W = Math.floor((SCREEN_W - 80) / 7); // modal has extra padding
 
 type ExerciseForm = {
   name: string;
@@ -34,66 +43,316 @@ type ExerciseForm = {
   videoUrl: string;
 };
 
-const defaultEx = (): ExerciseForm => ({
-  name: '',
-  sets: '3',
-  reps: '10',
-  coachNote: '',
-  videoUrl: '',
-});
+const defaultEx = (): ExerciseForm => ({ name: '', sets: '3', reps: '10', coachNote: '', videoUrl: '' });
 
+// ── Date helper ───────────────────────────────────────────────────────────────
+function toLocalISO(year: number, month: number, day: number) {
+  const mm = String(month + 1).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+  return `${year}-${mm}-${dd}`;
+}
+
+// ── Calendar step ─────────────────────────────────────────────────────────────
+function CalendarPicker({
+  planDates,
+  onSelect,
+  onClose,
+}: {
+  planDates: Set<string>;
+  onSelect: (iso: string) => void;
+  onClose: () => void;
+}) {
+  const [current, setCurrent] = useState(() => {
+    const d = new Date(); d.setDate(1); return d;
+  });
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const year = current.getFullYear();
+  const month = current.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+
+  const cells: (number | null)[] = [
+    ...Array(firstDay).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+
+  return (
+    <View>
+      <View style={cs.navRow}>
+        <TouchableOpacity onPress={() => setCurrent(new Date(year, month - 1, 1))} style={cs.navBtn}>
+          <Text style={cs.navArrow}>‹</Text>
+        </TouchableOpacity>
+        <Text style={cs.monthTitle}>{MONTHS[month]} {year}</Text>
+        <TouchableOpacity onPress={() => setCurrent(new Date(year, month + 1, 1))} style={cs.navBtn}>
+          <Text style={cs.navArrow}>›</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={cs.dayLabels}>
+        {DAYS.map(d => <Text key={d} style={[cs.dayLabel, { width: CELL_W }]}>{d}</Text>)}
+      </View>
+
+      <View style={cs.grid}>
+        {cells.map((day, i) => {
+          if (!day) return <View key={`e-${i}`} style={{ width: CELL_W, height: 44 }} />;
+
+          const iso = toLocalISO(year, month, day);
+          const cellDate = new Date(year, month, day);
+          const isPast = cellDate < today;
+          const hasPlan = planDates.has(iso);
+          const isToday = cellDate.getTime() === today.getTime();
+
+          return (
+            <TouchableOpacity
+              key={iso}
+              style={[
+                cs.cell,
+                { width: CELL_W },
+                isToday && cs.todayCell,
+                isPast && cs.pastCell,
+              ]}
+              onPress={() => { if (!isPast) onSelect(iso); }}
+              activeOpacity={isPast ? 1 : 0.7}
+            >
+              <Text style={[cs.dayNum, isToday && cs.todayNum, isPast && cs.pastNum]}>{day}</Text>
+              {hasPlan && <View style={[cs.dot, { backgroundColor: colors.primary }]} />}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <TouchableOpacity style={cs.cancelBtn} onPress={onClose}>
+        <Text style={cs.cancelTxt}>Cancel</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ── Searchable exercise row ───────────────────────────────────────────────────
+function ExerciseRow({
+  ex,
+  index,
+  library,
+  onUpdate,
+  onRemove,
+  canRemove,
+}: {
+  ex: ExerciseForm;
+  index: number;
+  library: LibraryExercise[];
+  onUpdate: (field: keyof ExerciseForm, value: string) => void;
+  onRemove: () => void;
+  canRemove: boolean;
+}) {
+  const [focused, setFocused] = useState(false);
+
+  const suggestions = useMemo(() => {
+    if (!ex.name.trim()) return library.slice(0, 8);
+    return library
+      .filter(l => l.name.toLowerCase().includes(ex.name.toLowerCase()))
+      .slice(0, 8);
+  }, [ex.name, library]);
+
+  const showDropdown = focused && suggestions.length > 0;
+
+  return (
+    <View style={es.block}>
+      <View style={es.header}>
+        <Text style={es.index}>Exercise {index + 1}</Text>
+        {canRemove && (
+          <TouchableOpacity onPress={onRemove}>
+            <Ionicons name="close-circle-outline" size={20} color={colors.danger} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Searchable name */}
+      <TextInput
+        style={es.input}
+        placeholder="Search or type exercise name…"
+        placeholderTextColor={colors.textDim}
+        value={ex.name}
+        onChangeText={v => onUpdate('name', v)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 150)}
+      />
+
+      {showDropdown && (
+        <View style={es.dropdown}>
+          {suggestions.map(lib => (
+            <TouchableOpacity
+              key={lib.id}
+              style={es.dropItem}
+              onPress={() => {
+                onUpdate('name', lib.name);
+                onUpdate('videoUrl', lib.videoUrl ?? '');
+                setFocused(false);
+              }}
+            >
+              <Text style={es.dropText}>{lib.name}</Text>
+              {lib.videoUrl ? (
+                <Ionicons name="play-circle-outline" size={14} color={colors.textMuted} />
+              ) : null}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      <View style={es.row}>
+        <TextInput
+          style={[es.input, { flex: 1 }]}
+          placeholder="Sets"
+          placeholderTextColor={colors.textDim}
+          value={ex.sets}
+          onChangeText={v => onUpdate('sets', v)}
+          keyboardType="number-pad"
+        />
+        <TextInput
+          style={[es.input, { flex: 1 }]}
+          placeholder="Reps"
+          placeholderTextColor={colors.textDim}
+          value={ex.reps}
+          onChangeText={v => onUpdate('reps', v)}
+        />
+      </View>
+      <TextInput
+        style={es.input}
+        placeholder="Coach note (optional)"
+        placeholderTextColor={colors.textDim}
+        value={ex.coachNote}
+        onChangeText={v => onUpdate('coachNote', v)}
+      />
+    </View>
+  );
+}
+
+// ── Main screen ───────────────────────────────────────────────────────────────
 export default function MemberPlansScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const router = useRouter();
   const navigation = useNavigation();
 
   const { data: users } = useUsers();
-  const member = users?.find((u) => u.id === userId);
+  const member = users?.find(u => String(u.id) === userId);
 
   const { data: plans, isLoading, isRefreshing, refresh, reload } = usePlans(userId);
   const { data: library } = useLibrary();
 
-  const [modalVisible, setModalVisible] = useState(false);
+  // Modal step: closed → calendar → form
+  const [step, setStep] = useState<'closed' | 'calendar' | 'form'>('closed');
+  const [planDate, setPlanDate] = useState<string | null>(null);
   const [planTitle, setPlanTitle] = useState('');
   const [exercises, setExercises] = useState<ExerciseForm[]>([defaultEx()]);
   const [saving, setSaving] = useState(false);
+
+  // Clone to same user
+  const [cloningPlan, setCloningPlan] = useState<Plan | null>(null);
+
+  // Clone to another user
+  const [cloneToUserPlan, setCloneToUserPlan] = useState<Plan | null>(null);
+  const [cloneUserStep, setCloneUserStep] = useState<'select' | 'date'>('select');
+  const [cloneTargetUserId, setCloneTargetUserId] = useState('');
+  const [cloning, setCloning] = useState(false);
 
   useLayoutEffect(() => {
     if (member) navigation.setOptions({ title: member.username });
   }, [member, navigation]);
 
+  // Set of ISO dates that already have plans (for calendar highlights)
+  const planDates = useMemo(() => {
+    const s = new Set<string>();
+    (plans ?? []).forEach(p => {
+      if (p.date) s.add(p.date.slice(0, 10));
+    });
+    return s;
+  }, [plans]);
+
+  function openCalendar() {
+    setCloningPlan(null);
+    setPlanDate(null);
+    setPlanTitle('');
+    setExercises([defaultEx()]);
+    setStep('calendar');
+  }
+
+  function handleDateSelect(iso: string) {
+    if (cloningPlan) {
+      executeCloneToSameUser(iso);
+    } else {
+      setPlanDate(iso);
+      setStep('form');
+    }
+  }
+
+  async function executeCloneToSameUser(iso: string) {
+    if (!cloningPlan) return;
+    setCloning(true);
+    try {
+      await apiFetch('/api/plans', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId,
+          title: cloningPlan.title,
+          date: iso,
+          exercises: cloningPlan.exercises.map(e => ({
+            name: e.name,
+            videoUrl: e.videoUrl || undefined,
+            sets: e.sets,
+            reps: e.reps,
+            coachNote: e.coachNote || undefined,
+            done: false,
+          })),
+        }),
+      });
+      setCloningPlan(null);
+      setStep('closed');
+      reload();
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setCloning(false);
+    }
+  }
+
+  async function executeCloneToUser(iso: string) {
+    if (!cloneToUserPlan || !cloneTargetUserId) return;
+    setCloning(true);
+    try {
+      await apiFetch('/api/plans/clone', {
+        method: 'POST',
+        body: JSON.stringify({
+          planId: cloneToUserPlan.id,
+          targetUserId: cloneTargetUserId,
+          date: iso,
+        }),
+      });
+      setCloneToUserPlan(null);
+      setCloneTargetUserId('');
+      setCloneUserStep('select');
+      Alert.alert('Success', 'Plan cloned successfully!');
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setCloning(false);
+    }
+  }
+
   function addExercise() {
-    setExercises((prev) => [...prev, defaultEx()]);
+    setExercises(prev => [...prev, defaultEx()]);
   }
 
   function removeExercise(i: number) {
-    setExercises((prev) => prev.filter((_, idx) => idx !== i));
+    setExercises(prev => prev.filter((_, idx) => idx !== i));
   }
 
   function updateExercise(i: number, field: keyof ExerciseForm, value: string) {
-    setExercises((prev) =>
-      prev.map((ex, idx) => (idx === i ? { ...ex, [field]: value } : ex)),
-    );
-  }
-
-  function pickFromLibrary(i: number, ex: LibraryExercise) {
-    setExercises((prev) =>
-      prev.map((e, idx) =>
-        idx === i ? { ...e, name: ex.name, videoUrl: ex.videoUrl ?? '' } : e,
-      ),
-    );
+    setExercises(prev => prev.map((ex, idx) => idx === i ? { ...ex, [field]: value } : ex));
   }
 
   async function handleCreate() {
-    if (!planTitle.trim()) {
-      Alert.alert('Validation', 'Plan title is required.');
-      return;
-    }
-    const valid = exercises.filter((e) => e.name.trim());
-    if (valid.length === 0) {
-      Alert.alert('Validation', 'Add at least one exercise.');
-      return;
-    }
+    if (!planTitle.trim()) { Alert.alert('Validation', 'Plan title is required.'); return; }
+    const valid = exercises.filter(e => e.name.trim());
+    if (valid.length === 0) { Alert.alert('Validation', 'Add at least one exercise.'); return; }
     setSaving(true);
     try {
       await apiFetch('/api/plans', {
@@ -101,7 +360,8 @@ export default function MemberPlansScreen() {
         body: JSON.stringify({
           userId,
           title: planTitle.trim(),
-          exercises: valid.map((e) => ({
+          date: planDate,
+          exercises: valid.map(e => ({
             name: e.name.trim(),
             sets: e.sets,
             reps: e.reps,
@@ -110,7 +370,7 @@ export default function MemberPlansScreen() {
           })),
         }),
       });
-      setModalVisible(false);
+      setStep('closed');
       setPlanTitle('');
       setExercises([defaultEx()]);
       reload();
@@ -125,8 +385,7 @@ export default function MemberPlansScreen() {
     Alert.alert('Delete plan', `Delete "${title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete',
-        style: 'destructive',
+        text: 'Delete', style: 'destructive',
         onPress: async () => {
           await apiFetch(`/api/plans/${planId}`, { method: 'DELETE' });
           reload();
@@ -137,7 +396,7 @@ export default function MemberPlansScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.center}>
+      <View style={s.center}>
         <ActivityIndicator color={colors.primary} />
       </View>
     );
@@ -147,18 +406,15 @@ export default function MemberPlansScreen() {
     <>
       <FlatList
         data={plans ?? []}
-        keyExtractor={(p) => p.id}
+        keyExtractor={p => String(p.id)}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={colors.primary} />
         }
         contentContainerStyle={{ padding: 16, paddingBottom: 40, flexGrow: 1 }}
         ListHeaderComponent={
-          <View style={styles.header}>
-            <Text style={styles.heading}>{member?.username ?? 'Member'}'s Plans</Text>
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => setModalVisible(true)}
-            >
+          <View style={s.header}>
+            <Text style={s.heading}>{member?.username ?? 'Member'}'s Plans</Text>
+            <TouchableOpacity style={s.addBtn} onPress={openCalendar}>
               <Ionicons name="add" size={22} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -166,123 +422,178 @@ export default function MemberPlansScreen() {
         ListEmptyComponent={<EmptyState message="No plans yet. Tap + to create one." />}
         renderItem={({ item }) => (
           <View>
-            <PlanCard
-              plan={item}
-              onPress={() => router.push(`/plans/${item.id}?userId=${userId}`)}
-            />
-            <TouchableOpacity
-              style={styles.deleteBtn}
-              onPress={() => handleDeletePlan(item.id, item.title)}
-            >
-              <Ionicons name="trash-outline" size={14} color={colors.danger} />
-              <Text style={styles.deleteBtnText}>Delete plan</Text>
-            </TouchableOpacity>
+            <PlanCard plan={item} onPress={() => router.push(`/plans/${item.id}?userId=${userId}`)} />
+            <View style={s.planActions}>
+              <TouchableOpacity style={s.actionPill} onPress={() => { setCloningPlan(item as any); setStep('calendar'); }}>
+                <Ionicons name="copy-outline" size={13} color={colors.info} />
+                <Text style={[s.actionPillTxt, { color: colors.info }]}>Clone</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.actionPill} onPress={() => { setCloneToUserPlan(item as any); setCloneUserStep('select'); setCloneTargetUserId(''); }}>
+                <Ionicons name="people-outline" size={13} color={colors.secondary} />
+                <Text style={[s.actionPillTxt, { color: colors.secondary }]}>To user</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.actionPill} onPress={() => handleDeletePlan(String(item.id), item.title)}>
+                <Ionicons name="trash-outline" size={13} color={colors.danger} />
+                <Text style={[s.actionPillTxt, { color: colors.danger }]}>Delete</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       />
 
-      {/* Create plan modal */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <View style={styles.modalContent}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalTitle}>New Plan</Text>
+      {/* ── Step 1: Calendar date picker (create or clone-same-user) ── */}
+      <Modal visible={step === 'calendar'} animationType="slide" transparent onRequestClose={() => { setStep('closed'); setCloningPlan(null); }}>
+        <View style={s.modalOverlay}>
+          <View style={[s.modalContent, { paddingBottom: 24 }]}>
+            {cloningPlan ? (
+              <>
+                <Text style={s.modalTitle}>Clone Plan</Text>
+                <View style={s.cloneBanner}>
+                  <Ionicons name="copy-outline" size={14} color={colors.info} />
+                  <Text style={s.cloneBannerTxt} numberOfLines={1}>"{cloningPlan.title}" → pick a new date</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={s.modalTitle}>Pick a Date</Text>
+                <Text style={s.modalSub}>Select the date for this plan</Text>
+              </>
+            )}
+            {cloning ? (
+              <ActivityIndicator color={colors.primary} style={{ marginVertical: 40 }} />
+            ) : (
+              <CalendarPicker
+                planDates={planDates}
+                onSelect={handleDateSelect}
+                onClose={() => { setStep('closed'); setCloningPlan(null); }}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
 
-              <Text style={styles.label}>Plan title</Text>
+      {/* ── Clone to another user ── */}
+      <Modal
+        visible={!!cloneToUserPlan}
+        animationType="slide"
+        transparent
+        onRequestClose={() => { setCloneToUserPlan(null); setCloneUserStep('select'); }}
+      >
+        <View style={s.modalOverlay}>
+          <View style={[s.modalContent, { paddingBottom: 32 }]}>
+            <View style={s.formHeader}>
+              {cloneUserStep === 'date' ? (
+                <TouchableOpacity onPress={() => setCloneUserStep('select')} style={s.backRow}>
+                  <Ionicons name="chevron-back" size={18} color={colors.primary} />
+                  <Text style={s.backTxt}>Back</Text>
+                </TouchableOpacity>
+              ) : <View />}
+              <TouchableOpacity onPress={() => { setCloneToUserPlan(null); setCloneUserStep('select'); }}>
+                <Ionicons name="close" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={s.modalTitle}>Clone to User</Text>
+            <View style={s.cloneBanner}>
+              <Ionicons name="copy-outline" size={14} color={colors.secondary} />
+              <Text style={s.cloneBannerTxt} numberOfLines={1}>"{cloneToUserPlan?.title}"</Text>
+            </View>
+
+            {cloneUserStep === 'select' ? (
+              <>
+                <Text style={[s.label, { marginTop: 12 }]}>Select member</Text>
+                <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+                  {(users ?? []).filter(u => u.role !== 'admin').map(u => {
+                    const selected = String(u.id) === cloneTargetUserId;
+                    return (
+                      <TouchableOpacity
+                        key={String(u.id)}
+                        style={[s.userRow, selected && s.userRowSelected]}
+                        onPress={() => setCloneTargetUserId(String(u.id))}
+                        activeOpacity={0.8}
+                      >
+                        <View style={s.userAvatar}>
+                          <Text style={s.userAvatarTxt}>{u.username[0].toUpperCase()}</Text>
+                        </View>
+                        <Text style={[s.userRowName, selected && { color: colors.primary }]}>{u.username}</Text>
+                        {selected && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+                <Button
+                  label="Next: Pick Date"
+                  onPress={() => { if (cloneTargetUserId) setCloneUserStep('date'); }}
+                  style={{ marginTop: 16 }}
+                />
+              </>
+            ) : (
+              <>
+                <Text style={[s.label, { marginTop: 12 }]}>Select date</Text>
+                {cloning ? (
+                  <ActivityIndicator color={colors.primary} style={{ marginVertical: 40 }} />
+                ) : (
+                  <CalendarPicker
+                    planDates={new Set()}
+                    onSelect={executeCloneToUser}
+                    onClose={() => setCloneUserStep('select')}
+                  />
+                )}
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Step 2: Plan form ── */}
+      <Modal visible={step === 'form'} animationType="slide" transparent onRequestClose={() => setStep('calendar')}>
+        <KeyboardAvoidingView style={s.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={s.modalContent}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {/* Header */}
+              <View style={s.formHeader}>
+                <TouchableOpacity onPress={() => setStep('calendar')} style={s.backRow}>
+                  <Ionicons name="chevron-back" size={18} color={colors.primary} />
+                  <Text style={s.backTxt}>Change date</Text>
+                </TouchableOpacity>
+                <View style={s.dateBadge}>
+                  <Ionicons name="calendar-outline" size={13} color={colors.primary} />
+                  <Text style={s.dateBadgeTxt}>{planDate}</Text>
+                </View>
+              </View>
+
+              <Text style={s.modalTitle}>New Plan</Text>
+
+              <Text style={s.label}>Plan title</Text>
               <TextInput
-                style={styles.input}
+                style={s.input}
                 placeholder="e.g. Push Day A"
                 placeholderTextColor={colors.textDim}
                 value={planTitle}
                 onChangeText={setPlanTitle}
               />
 
-              <Text style={[styles.label, { marginTop: 16 }]}>Exercises</Text>
+              <Text style={[s.label, { marginTop: 12 }]}>Exercises</Text>
 
               {exercises.map((ex, i) => (
-                <View key={i} style={styles.exBlock}>
-                  <View style={styles.exHeader}>
-                    <Text style={styles.exIndex}>Exercise {i + 1}</Text>
-                    {exercises.length > 1 && (
-                      <TouchableOpacity onPress={() => removeExercise(i)}>
-                        <Ionicons name="close-circle-outline" size={20} color={colors.danger} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  {/* Quick-pick from library */}
-                  {library && library.length > 0 && (
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      style={{ marginBottom: 8 }}
-                    >
-                      {library.slice(0, 20).map((le) => (
-                        <TouchableOpacity
-                          key={le.id}
-                          style={[
-                            styles.libChip,
-                            ex.name === le.name && styles.libChipActive,
-                          ]}
-                          onPress={() => pickFromLibrary(i, le)}
-                        >
-                          <Text
-                            style={[
-                              styles.libChipText,
-                              ex.name === le.name && { color: colors.primary },
-                            ]}
-                          >
-                            {le.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  )}
-
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Name"
-                    placeholderTextColor={colors.textDim}
-                    value={ex.name}
-                    onChangeText={(v) => updateExercise(i, 'name', v)}
-                  />
-                  <View style={styles.rowInputs}>
-                    <TextInput
-                      style={[styles.input, { flex: 1 }]}
-                      placeholder="Sets"
-                      placeholderTextColor={colors.textDim}
-                      value={ex.sets}
-                      onChangeText={(v) => updateExercise(i, 'sets', v)}
-                      keyboardType="number-pad"
-                    />
-                    <TextInput
-                      style={[styles.input, { flex: 1 }]}
-                      placeholder="Reps"
-                      placeholderTextColor={colors.textDim}
-                      value={ex.reps}
-                      onChangeText={(v) => updateExercise(i, 'reps', v)}
-                    />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Coach note (optional)"
-                    placeholderTextColor={colors.textDim}
-                    value={ex.coachNote}
-                    onChangeText={(v) => updateExercise(i, 'coachNote', v)}
-                  />
-                </View>
+                <ExerciseRow
+                  key={i}
+                  ex={ex}
+                  index={i}
+                  library={library ?? []}
+                  onUpdate={(field, value) => updateExercise(i, field, value)}
+                  onRemove={() => removeExercise(i)}
+                  canRemove={exercises.length > 1}
+                />
               ))}
 
-              <TouchableOpacity style={styles.addExBtn} onPress={addExercise}>
+              <TouchableOpacity style={s.addExBtn} onPress={addExercise}>
                 <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                <Text style={styles.addExText}>Add exercise</Text>
+                <Text style={s.addExText}>Add exercise</Text>
               </TouchableOpacity>
 
-              <View style={styles.modalActions}>
-                <Button label="Cancel" variant="ghost" onPress={() => setModalVisible(false)} style={{ flex: 1 }} />
+              <View style={s.modalActions}>
+                <Button label="Cancel" variant="ghost" onPress={() => setStep('closed')} style={{ flex: 1 }} />
                 <Button label="Create Plan" onPress={handleCreate} loading={saving} style={{ flex: 1 }} />
               </View>
             </ScrollView>
@@ -293,79 +604,127 @@ export default function MemberPlansScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+// ── Styles ────────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
   center: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   heading: { color: colors.text, fontSize: 20, fontWeight: '700' },
   addBtn: {
     backgroundColor: colors.primary,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
   },
-  deleteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-end',
-    marginTop: -8,
-    marginBottom: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  planActions: {
+    flexDirection: 'row', gap: 8,
+    marginTop: -6, marginBottom: 12, paddingHorizontal: 2,
   },
-  deleteBtnText: { color: colors.danger, fontSize: 12 },
+  actionPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 8, backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.borderSubtle,
+  },
+  actionPillTxt: { fontSize: 12, fontWeight: '600' },
+
+  cloneBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: colors.surface2, borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 7,
+    marginBottom: 8, borderWidth: 1, borderColor: colors.borderSubtle,
+  },
+  cloneBannerTxt: { color: colors.textSub, fontSize: 13, flex: 1 },
+
+  userRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: colors.surface2, borderRadius: 10,
+    padding: 12, marginBottom: 6,
+    borderWidth: 1, borderColor: colors.borderSubtle,
+  },
+  userRowSelected: { borderColor: colors.primary, backgroundColor: colors.primary + '10' },
+  userAvatar: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: colors.primary + '25',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  userAvatarTxt: { color: colors.primary, fontWeight: '700', fontSize: 15 },
+  userRowName: { flex: 1, color: colors.text, fontWeight: '500', fontSize: 14 },
+
   modalOverlay: { flex: 1, backgroundColor: '#000000aa', justifyContent: 'flex-end' },
   modalContent: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    maxHeight: '90%',
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 24, maxHeight: '92%',
   },
-  modalTitle: { color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: 16 },
+  modalTitle: { color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: 4 },
+  modalSub: { color: colors.textMuted, fontSize: 13, marginBottom: 16 },
+
+  formHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  backRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  backTxt: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  dateBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: colors.primary + '18', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderWidth: 1, borderColor: colors.primary + '40',
+  },
+  dateBadgeTxt: { color: colors.primary, fontSize: 13, fontWeight: '700' },
+
   label: { color: colors.textSub, fontSize: 13, fontWeight: '600', marginBottom: 6 },
   input: {
-    backgroundColor: colors.surface2,
-    borderRadius: 10,
-    padding: 12,
-    color: colors.text,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 8,
+    backgroundColor: colors.surface2, borderRadius: 10,
+    padding: 12, color: colors.text, fontSize: 14,
+    borderWidth: 1, borderColor: colors.border, marginBottom: 8,
   },
-  rowInputs: { flexDirection: 'row', gap: 8 },
-  exBlock: {
-    backgroundColor: colors.surface2,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  exHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  exIndex: { color: colors.primary, fontWeight: '600', fontSize: 13 },
-  libChip: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  libChipActive: { borderColor: colors.primary },
-  libChipText: { color: colors.textSub, fontSize: 12 },
-  addExBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'center',
-    padding: 12,
-    marginBottom: 12,
-  },
+  addExBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10 },
   addExText: { color: colors.primary, fontWeight: '600', fontSize: 14 },
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 4, marginBottom: 16 },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 16, marginBottom: 8 },
+});
+
+// Calendar picker styles
+const cs = StyleSheet.create({
+  navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  navBtn: { padding: 8 },
+  navArrow: { color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 32 },
+  monthTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
+  dayLabels: { flexDirection: 'row', marginBottom: 4 },
+  dayLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '600', textAlign: 'center' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
+  cell: { height: 44, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  todayCell: { backgroundColor: colors.primary + '22', borderRadius: 8 },
+  pastCell: { opacity: 0.3 },
+  dayNum: { color: colors.text, fontSize: 13, fontWeight: '500' },
+  todayNum: { color: colors.primary, fontWeight: '700' },
+  pastNum: { color: colors.textMuted },
+  dot: { width: 5, height: 5, borderRadius: 3 },
+  cancelBtn: { alignItems: 'center', paddingVertical: 12, marginTop: 4 },
+  cancelTxt: { color: colors.textMuted, fontSize: 15, fontWeight: '600' },
+});
+
+// Exercise row styles
+const es = StyleSheet.create({
+  block: {
+    backgroundColor: colors.surface2, borderRadius: 12,
+    padding: 12, marginBottom: 10,
+    borderWidth: 1, borderColor: colors.borderSubtle,
+  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  index: { color: colors.primary, fontWeight: '600', fontSize: 13 },
+  input: {
+    backgroundColor: colors.background, borderRadius: 8,
+    padding: 11, color: colors.text, fontSize: 14,
+    borderWidth: 1, borderColor: colors.border, marginBottom: 6,
+  },
+  row: { flexDirection: 'row', gap: 8 },
+  dropdown: {
+    backgroundColor: colors.surface,
+    borderRadius: 10, borderWidth: 1, borderColor: colors.border,
+    marginBottom: 6, overflow: 'hidden',
+  },
+  dropItem: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
+  },
+  dropText: { color: colors.text, fontSize: 14 },
 });
