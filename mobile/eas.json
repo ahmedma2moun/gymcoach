@@ -18,6 +18,18 @@
         "buildType": "apk"
       }
     },
+   "testflight": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "apk",
+        "distribution": "internal"
+      },
+      "ios": {
+        "buildConfiguration": "Release",
+        "simulator": false,
+        "image": "latest"
+      }
+    },
     "production": {
       "ios": {
         "buildConfiguration": "Release"
@@ -28,8 +40,9 @@
     }
   },
   "submit": {
-    "production": {
+    "testflight": {
       "ios": {
+        "ascAppId": "3YC4L83GPY",
         "ascApiKeyIssuerId": "$(ASC_ISSUER_ID)",
         "ascApiKeyId": "$(ASC_KEY_ID)",
         "ascApiKeyPath": "/tmp/asc_key.p8"
