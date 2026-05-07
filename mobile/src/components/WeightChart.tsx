@@ -25,6 +25,7 @@ export function WeightChart({ name, history }: { name: string; history: Exercise
   const points = history
     .map((e) => ({ date: e.date, weight: parseWeight(e) }))
     .filter((p): p is { date: string; weight: number } => p.weight !== null)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(-10);
 
   if (points.length < 2) {
