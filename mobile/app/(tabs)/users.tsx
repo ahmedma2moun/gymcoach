@@ -37,9 +37,9 @@ function ActionBtn({
 }) {
   return (
     <TouchableOpacity
-      style={[s.actionBtn, { borderColor: color + '40' }]}
+      style={[s.actionBtn, { borderColor: color + '40', backgroundColor: color + '12' }]}
       onPress={onPress}
-      activeOpacity={0.75}
+      activeOpacity={0.8}
     >
       <Ionicons name={icon as any} size={13} color={color} />
       <Text style={[s.actionLabel, { color }]}>{label}</Text>
@@ -78,7 +78,7 @@ function UserCard({
       <View style={s.actions}>
         <ActionBtn
           icon={user.isActive ? 'ban-outline' : 'checkmark-circle-outline'}
-          label={user.isActive ? 'Deactivate' : 'Activate'}
+          label={user.isActive ? 'Disable' : 'Enable'}
           color={user.isActive ? colors.danger : colors.success}
           onPress={onToggle}
         />
@@ -96,7 +96,7 @@ function UserCard({
         />
         <ActionBtn
           icon="bar-chart-outline"
-          label="Analytics"
+          label="Stats"
           color={colors.secondary}
           onPress={onAnalytics}
         />
@@ -161,17 +161,21 @@ export default function UsersScreen() {
   return (
     <>
       <FlatList
+        style={s.list}
         data={members}
         keyExtractor={u => String(u.id)}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={colors.primary} />
         }
-        contentContainerStyle={{ padding: 16, paddingBottom: 40, flexGrow: 1 }}
+        contentContainerStyle={s.content}
         ListHeaderComponent={
-          <View style={{ marginBottom: 12 }}>
+          <View style={s.headerWrap}>
             <View style={s.headerRow}>
-              <Text style={s.heading}>Users</Text>
-              <TouchableOpacity style={s.addBtn} onPress={() => setCreateVisible(true)}>
+              <View>
+                <Text style={s.eyebrow}>Coaching</Text>
+                <Text style={s.heading}>Users</Text>
+              </View>
+              <TouchableOpacity style={s.addBtn} onPress={() => setCreateVisible(true)} activeOpacity={0.85}>
                 <Ionicons name="add" size={22} color="#fff" />
               </TouchableOpacity>
             </View>
@@ -201,10 +205,11 @@ export default function UsersScreen() {
       >
         <View style={s.historyOverlay}>
           <View style={s.historySheet}>
+            <View style={s.handle} />
             <View style={s.historyHeader}>
-              <Text style={s.historyTitle}>{historyUser?.username}'s History</Text>
-              <TouchableOpacity onPress={() => setHistoryUser(null)} hitSlop={12}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
+              <Text style={s.historyTitle}>{historyUser?.username}'s history</Text>
+              <TouchableOpacity onPress={() => setHistoryUser(null)} hitSlop={12} style={s.closeIcon}>
+                <Ionicons name="close" size={18} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -237,6 +242,7 @@ export default function UsersScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={s.modalContent}>
+            <View style={s.handle} />
             <Text style={s.modalTitle}>Create User</Text>
 
             <Text style={s.label}>Username</Text>
@@ -278,22 +284,42 @@ export default function UsersScreen() {
 
 const s = StyleSheet.create({
   center: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
-
+  list: { backgroundColor: colors.background },
+  content: { padding: 16, paddingBottom: 40, flexGrow: 1 },
+  headerWrap: { marginBottom: 12 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  heading: { color: colors.text, fontSize: 22, fontWeight: '700' },
-  sub: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
+  eyebrow: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  heading: {
+    color: colors.text,
+    fontSize: 26,
+    fontWeight: '800',
+    marginTop: 4,
+    letterSpacing: -0.5,
+  },
+  sub: { color: colors.textMuted, fontSize: 13, marginTop: 6, fontWeight: '500' },
   addBtn: {
     backgroundColor: colors.primary,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 4,
   },
 
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
@@ -302,42 +328,53 @@ const s = StyleSheet.create({
   },
   cardTop: { flexDirection: 'row', alignItems: 'center' },
   avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: colors.primary + '25',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary + '22',
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  avatarText: { color: colors.primary, fontWeight: '700', fontSize: 18 },
+  avatarText: { color: colors.primary, fontWeight: '800', fontSize: 17 },
   info: { flex: 1 },
-  name: { color: colors.text, fontWeight: '600', fontSize: 15 },
+  name: { color: colors.text, fontWeight: '700', fontSize: 15, letterSpacing: -0.1 },
   badges: { flexDirection: 'row', gap: 6, marginTop: 4 },
 
-  actions: { flexDirection: 'row', gap: 8 },
+  actions: { flexDirection: 'row', gap: 6 },
   actionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingVertical: 7,
-    borderRadius: 8,
+    paddingVertical: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    backgroundColor: colors.surface2,
   },
-  actionLabel: { fontSize: 11, fontWeight: '600' },
+  actionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.2 },
 
   // History sheet
-  historyOverlay: { flex: 1, backgroundColor: '#000000bb', justifyContent: 'flex-end' },
+  historyOverlay: { flex: 1, backgroundColor: '#000000cc', justifyContent: 'flex-end' },
   historySheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingTop: 14,
     maxHeight: '85%',
+    borderTopWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: 12,
   },
   historyHeader: {
     flexDirection: 'row',
@@ -345,28 +382,45 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  historyTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
+  historyTitle: { color: colors.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
+  closeIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // Create user modal
-  modalOverlay: { flex: 1, backgroundColor: '#000000aa', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: '#000000bb', justifyContent: 'flex-end' },
   modalContent: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: 24,
     gap: 8,
     paddingBottom: 40,
+    borderTopWidth: 1,
+    borderColor: colors.borderSubtle,
   },
-  modalTitle: { color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: 8 },
-  label: { color: colors.textSub, fontSize: 13, fontWeight: '600', marginTop: 4 },
+  modalTitle: { color: colors.text, fontSize: 20, fontWeight: '800', marginBottom: 8, letterSpacing: -0.3 },
+  label: {
+    color: colors.textSub,
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 8,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
   input: {
     backgroundColor: colors.surface2,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 14,
     color: colors.text,
     fontSize: 15,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
 });

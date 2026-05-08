@@ -27,7 +27,7 @@ import { EmptyState, Button } from '@/src/components/ui';
 import { colors } from '@/src/theme/colors';
 import type { LibraryExercise, Plan } from '@/src/types/api';
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -79,17 +79,17 @@ function CalendarPicker({
   return (
     <View>
       <View style={cs.navRow}>
-        <TouchableOpacity onPress={() => setCurrent(new Date(year, month - 1, 1))} style={cs.navBtn}>
-          <Text style={cs.navArrow}>‹</Text>
+        <TouchableOpacity onPress={() => setCurrent(new Date(year, month - 1, 1))} style={cs.navBtn} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={18} color={colors.primary} />
         </TouchableOpacity>
         <Text style={cs.monthTitle}>{MONTHS[month]} {year}</Text>
-        <TouchableOpacity onPress={() => setCurrent(new Date(year, month + 1, 1))} style={cs.navBtn}>
-          <Text style={cs.navArrow}>›</Text>
+        <TouchableOpacity onPress={() => setCurrent(new Date(year, month + 1, 1))} style={cs.navBtn} activeOpacity={0.7}>
+          <Ionicons name="chevron-forward" size={18} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
       <View style={cs.dayLabels}>
-        {DAYS.map(d => <Text key={d} style={[cs.dayLabel, { width: CELL_W }]}>{d}</Text>)}
+        {DAYS.map((d, i) => <Text key={`${d}-${i}`} style={[cs.dayLabel, { width: CELL_W }]}>{d}</Text>)}
       </View>
 
       <View style={cs.grid}>
@@ -158,10 +158,14 @@ function ExerciseRow({
   return (
     <View style={es.block}>
       <View style={es.header}>
-        <Text style={es.index}>Exercise {index + 1}</Text>
+        <View style={es.indexBadge}>
+          <Text style={es.indexBadgeTxt}>{index + 1}</Text>
+        </View>
+        <Text style={es.indexLabel}>Exercise {index + 1}</Text>
+        <View style={{ flex: 1 }} />
         {canRemove && (
-          <TouchableOpacity onPress={onRemove}>
-            <Ionicons name="close-circle-outline" size={20} color={colors.danger} />
+          <TouchableOpacity onPress={onRemove} hitSlop={8}>
+            <Ionicons name="close-circle" size={20} color={colors.danger} />
           </TouchableOpacity>
         )}
       </View>
@@ -260,11 +264,11 @@ export default function MemberPlansScreen() {
 
   // Set of ISO dates that already have plans (for calendar highlights)
   const planDates = useMemo(() => {
-    const s = new Set<string>();
+    const set = new Set<string>();
     (plans ?? []).forEach(p => {
-      if (p.date) s.add(p.date.slice(0, 10));
+      if (p.date) set.add(p.date.slice(0, 10));
     });
-    return s;
+    return set;
   }, [plans]);
 
   function openCalendar() {
@@ -405,16 +409,21 @@ export default function MemberPlansScreen() {
   return (
     <>
       <FlatList
+        style={s.list}
         data={plans ?? []}
         keyExtractor={p => String(p.id)}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={colors.primary} />
         }
-        contentContainerStyle={{ padding: 16, paddingBottom: 40, flexGrow: 1 }}
+        contentContainerStyle={s.content}
         ListHeaderComponent={
           <View style={s.header}>
-            <Text style={s.heading}>{member?.username ?? 'Member'}'s Plans</Text>
-            <TouchableOpacity style={s.addBtn} onPress={openCalendar}>
+            <View>
+              <Text style={s.eyebrow}>Member</Text>
+              <Text style={s.heading}>{member?.username ?? 'Member'}</Text>
+              <Text style={s.sub}>Plans assigned</Text>
+            </View>
+            <TouchableOpacity style={s.addBtn} onPress={openCalendar} activeOpacity={0.85}>
               <Ionicons name="add" size={22} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -424,15 +433,27 @@ export default function MemberPlansScreen() {
           <View>
             <PlanCard plan={item} onPress={() => router.push(`/plans/${item.id}?userId=${userId}`)} />
             <View style={s.planActions}>
-              <TouchableOpacity style={s.actionPill} onPress={() => { setCloningPlan(item as any); setStep('calendar'); }}>
+              <TouchableOpacity
+                style={[s.actionPill, { borderColor: colors.info + '40', backgroundColor: colors.info + '10' }]}
+                onPress={() => { setCloningPlan(item as any); setStep('calendar'); }}
+                activeOpacity={0.8}
+              >
                 <Ionicons name="copy-outline" size={13} color={colors.info} />
                 <Text style={[s.actionPillTxt, { color: colors.info }]}>Clone</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.actionPill} onPress={() => { setCloneToUserPlan(item as any); setCloneUserStep('select'); setCloneTargetUserId(''); }}>
+              <TouchableOpacity
+                style={[s.actionPill, { borderColor: colors.secondary + '40', backgroundColor: colors.secondary + '10' }]}
+                onPress={() => { setCloneToUserPlan(item as any); setCloneUserStep('select'); setCloneTargetUserId(''); }}
+                activeOpacity={0.8}
+              >
                 <Ionicons name="people-outline" size={13} color={colors.secondary} />
                 <Text style={[s.actionPillTxt, { color: colors.secondary }]}>To user</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.actionPill} onPress={() => handleDeletePlan(String(item.id), item.title)}>
+              <TouchableOpacity
+                style={[s.actionPill, { borderColor: colors.danger + '40', backgroundColor: colors.danger + '10' }]}
+                onPress={() => handleDeletePlan(String(item.id), item.title)}
+                activeOpacity={0.8}
+              >
                 <Ionicons name="trash-outline" size={13} color={colors.danger} />
                 <Text style={[s.actionPillTxt, { color: colors.danger }]}>Delete</Text>
               </TouchableOpacity>
@@ -445,6 +466,7 @@ export default function MemberPlansScreen() {
       <Modal visible={step === 'calendar'} animationType="slide" transparent onRequestClose={() => { setStep('closed'); setCloningPlan(null); }}>
         <View style={s.modalOverlay}>
           <View style={[s.modalContent, { paddingBottom: 24 }]}>
+            <View style={s.modalHandle} />
             {cloningPlan ? (
               <>
                 <Text style={s.modalTitle}>Clone Plan</Text>
@@ -481,6 +503,7 @@ export default function MemberPlansScreen() {
       >
         <View style={s.modalOverlay}>
           <View style={[s.modalContent, { paddingBottom: 32 }]}>
+            <View style={s.modalHandle} />
             <View style={s.formHeader}>
               {cloneUserStep === 'date' ? (
                 <TouchableOpacity onPress={() => setCloneUserStep('select')} style={s.backRow}>
@@ -488,8 +511,8 @@ export default function MemberPlansScreen() {
                   <Text style={s.backTxt}>Back</Text>
                 </TouchableOpacity>
               ) : <View />}
-              <TouchableOpacity onPress={() => { setCloneToUserPlan(null); setCloneUserStep('select'); }}>
-                <Ionicons name="close" size={20} color={colors.textMuted} />
+              <TouchableOpacity onPress={() => { setCloneToUserPlan(null); setCloneUserStep('select'); }} style={s.closeIcon}>
+                <Ionicons name="close" size={18} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -510,13 +533,13 @@ export default function MemberPlansScreen() {
                         key={String(u.id)}
                         style={[s.userRow, selected && s.userRowSelected]}
                         onPress={() => setCloneTargetUserId(String(u.id))}
-                        activeOpacity={0.8}
+                        activeOpacity={0.85}
                       >
                         <View style={s.userAvatar}>
                           <Text style={s.userAvatarTxt}>{u.username[0].toUpperCase()}</Text>
                         </View>
                         <Text style={[s.userRowName, selected && { color: colors.primary }]}>{u.username}</Text>
-                        {selected && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
+                        {selected && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
                       </TouchableOpacity>
                     );
                   })}
@@ -549,6 +572,7 @@ export default function MemberPlansScreen() {
       <Modal visible={step === 'form'} animationType="slide" transparent onRequestClose={() => setStep('calendar')}>
         <KeyboardAvoidingView style={s.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={s.modalContent}>
+            <View style={s.modalHandle} />
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {/* Header */}
               <View style={s.formHeader}>
@@ -557,7 +581,7 @@ export default function MemberPlansScreen() {
                   <Text style={s.backTxt}>Change date</Text>
                 </TouchableOpacity>
                 <View style={s.dateBadge}>
-                  <Ionicons name="calendar-outline" size={13} color={colors.primary} />
+                  <Ionicons name="calendar" size={12} color={colors.primary} />
                   <Text style={s.dateBadgeTxt}>{planDate}</Text>
                 </View>
               </View>
@@ -573,7 +597,7 @@ export default function MemberPlansScreen() {
                 onChangeText={setPlanTitle}
               />
 
-              <Text style={[s.label, { marginTop: 12 }]}>Exercises</Text>
+              <Text style={[s.label, { marginTop: 16 }]}>Exercises</Text>
 
               {exercises.map((ex, i) => (
                 <ExerciseRow
@@ -587,8 +611,8 @@ export default function MemberPlansScreen() {
                 />
               ))}
 
-              <TouchableOpacity style={s.addExBtn} onPress={addExercise}>
-                <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+              <TouchableOpacity style={s.addExBtn} onPress={addExercise} activeOpacity={0.7}>
+                <Ionicons name="add-circle" size={18} color={colors.primary} />
                 <Text style={s.addExText}>Add exercise</Text>
               </TouchableOpacity>
 
@@ -608,110 +632,181 @@ export default function MemberPlansScreen() {
 
 const s = StyleSheet.create({
   center: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  heading: { color: colors.text, fontSize: 20, fontWeight: '700' },
+  list: { backgroundColor: colors.background },
+  content: { padding: 16, paddingBottom: 40, flexGrow: 1 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  eyebrow: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  heading: { color: colors.text, fontSize: 24, fontWeight: '800', marginTop: 4, letterSpacing: -0.5 },
+  sub: { color: colors.textMuted, fontSize: 13, marginTop: 4, fontWeight: '500' },
   addBtn: {
     backgroundColor: colors.primary,
-    width: 36, height: 36, borderRadius: 18,
+    width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 4,
   },
   planActions: {
-    flexDirection: 'row', gap: 8,
-    marginTop: -6, marginBottom: 12, paddingHorizontal: 2,
+    flexDirection: 'row', gap: 6,
+    marginTop: -4, marginBottom: 14, paddingHorizontal: 2,
   },
   actionPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 10, paddingVertical: 5,
-    borderRadius: 8, backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.borderSubtle,
+    flex: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  actionPillTxt: { fontSize: 12, fontWeight: '600' },
+  actionPillTxt: { fontSize: 11, fontWeight: '700', letterSpacing: 0.2 },
 
   cloneBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: colors.surface2, borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 7,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: colors.surface2, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 10,
     marginBottom: 8, borderWidth: 1, borderColor: colors.borderSubtle,
   },
-  cloneBannerTxt: { color: colors.textSub, fontSize: 13, flex: 1 },
+  cloneBannerTxt: { color: colors.textSub, fontSize: 13, flex: 1, fontWeight: '500' },
 
   userRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: colors.surface2, borderRadius: 10,
+    backgroundColor: colors.surface2, borderRadius: 12,
     padding: 12, marginBottom: 6,
     borderWidth: 1, borderColor: colors.borderSubtle,
   },
-  userRowSelected: { borderColor: colors.primary, backgroundColor: colors.primary + '10' },
+  userRowSelected: { borderColor: colors.primary, backgroundColor: colors.primary + '14' },
   userAvatar: {
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: colors.primary + '25',
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.primary + '22',
+    borderWidth: 1, borderColor: colors.primary + '40',
     alignItems: 'center', justifyContent: 'center',
   },
-  userAvatarTxt: { color: colors.primary, fontWeight: '700', fontSize: 15 },
-  userRowName: { flex: 1, color: colors.text, fontWeight: '500', fontSize: 14 },
+  userAvatarTxt: { color: colors.primary, fontWeight: '800', fontSize: 14 },
+  userRowName: { flex: 1, color: colors.text, fontWeight: '600', fontSize: 14 },
 
-  modalOverlay: { flex: 1, backgroundColor: '#000000aa', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: '#000000bb', justifyContent: 'flex-end' },
   modalContent: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
     padding: 24, maxHeight: '92%',
+    borderTopWidth: 1, borderColor: colors.borderSubtle,
   },
-  modalTitle: { color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: 4 },
-  modalSub: { color: colors.textMuted, fontSize: 13, marginBottom: 16 },
+  modalHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginTop: -8,
+    marginBottom: 14,
+  },
+  modalTitle: { color: colors.text, fontSize: 20, fontWeight: '800', marginBottom: 6, letterSpacing: -0.3 },
+  modalSub: { color: colors.textMuted, fontSize: 13, marginBottom: 16, fontWeight: '500' },
 
   formHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  backTxt: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  backTxt: { color: colors.primary, fontSize: 14, fontWeight: '700' },
+  closeIcon: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: colors.surface2,
+    alignItems: 'center', justifyContent: 'center',
+  },
   dateBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: colors.primary + '18', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 5,
+    backgroundColor: colors.primary + '18', borderRadius: 999,
+    paddingHorizontal: 12, paddingVertical: 5,
     borderWidth: 1, borderColor: colors.primary + '40',
   },
-  dateBadgeTxt: { color: colors.primary, fontSize: 13, fontWeight: '700' },
+  dateBadgeTxt: { color: colors.primary, fontSize: 12, fontWeight: '800' },
 
-  label: { color: colors.textSub, fontSize: 13, fontWeight: '600', marginBottom: 6 },
+  label: {
+    color: colors.textSub,
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 8,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
   input: {
     backgroundColor: colors.surface2, borderRadius: 10,
     padding: 12, color: colors.text, fontSize: 14,
     borderWidth: 1, borderColor: colors.border, marginBottom: 8,
   },
-  addExBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10 },
-  addExText: { color: colors.primary, fontWeight: '600', fontSize: 14 },
+  addExBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 12 },
+  addExText: { color: colors.primary, fontWeight: '700', fontSize: 14 },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 16, marginBottom: 8 },
 });
 
 // Calendar picker styles
 const cs = StyleSheet.create({
   navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  navBtn: { padding: 8 },
-  navArrow: { color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 32 },
-  monthTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
+  navBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: colors.surface2,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  monthTitle: { color: colors.text, fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
   dayLabels: { flexDirection: 'row', marginBottom: 4 },
-  dayLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '600', textAlign: 'center' },
+  dayLabel: {
+    color: colors.textMuted, fontSize: 11, fontWeight: '700',
+    textAlign: 'center', letterSpacing: 0.4,
+  },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
   cell: { height: 44, alignItems: 'center', justifyContent: 'center', gap: 3 },
-  todayCell: { backgroundColor: colors.primary + '22', borderRadius: 8 },
+  todayCell: {
+    backgroundColor: colors.primary + '22', borderRadius: 10,
+    borderWidth: 1, borderColor: colors.primary + '50',
+  },
   pastCell: { opacity: 0.3 },
-  dayNum: { color: colors.text, fontSize: 13, fontWeight: '500' },
-  todayNum: { color: colors.primary, fontWeight: '700' },
+  dayNum: { color: colors.text, fontSize: 13, fontWeight: '600' },
+  todayNum: { color: colors.primary, fontWeight: '800' },
   pastNum: { color: colors.textMuted },
   dot: { width: 5, height: 5, borderRadius: 3 },
-  cancelBtn: { alignItems: 'center', paddingVertical: 12, marginTop: 4 },
-  cancelTxt: { color: colors.textMuted, fontSize: 15, fontWeight: '600' },
+  cancelBtn: { alignItems: 'center', paddingVertical: 14, marginTop: 4 },
+  cancelTxt: { color: colors.textMuted, fontSize: 14, fontWeight: '700', letterSpacing: 0.3 },
 });
 
 // Exercise row styles
 const es = StyleSheet.create({
   block: {
-    backgroundColor: colors.surface2, borderRadius: 12,
-    padding: 12, marginBottom: 10,
+    backgroundColor: colors.surface2, borderRadius: 14,
+    padding: 14, marginBottom: 10,
     borderWidth: 1, borderColor: colors.borderSubtle,
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  index: { color: colors.primary, fontWeight: '600', fontSize: 13 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  indexBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.primary + '22',
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  indexBadgeTxt: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  indexLabel: { color: colors.textSub, fontWeight: '600', fontSize: 13 },
   input: {
-    backgroundColor: colors.background, borderRadius: 8,
+    backgroundColor: colors.background, borderRadius: 10,
     padding: 11, color: colors.text, fontSize: 14,
     borderWidth: 1, borderColor: colors.border, marginBottom: 6,
   },

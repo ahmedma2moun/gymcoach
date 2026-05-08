@@ -1,4 +1,4 @@
-import { FlatList, RefreshControl, View, Text, ActivityIndicator } from 'react-native';
+import { FlatList, RefreshControl, View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/auth/AuthContext';
 import { usePlans } from '@/src/hooks/usePlans';
@@ -13,14 +13,17 @@ export default function PlansScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={styles.center}>
         <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
 
+  const total = plans?.length ?? 0;
+
   return (
     <FlatList
+      style={styles.list}
       data={plans ?? []}
       keyExtractor={(p) => p.id}
       refreshControl={
@@ -30,14 +33,13 @@ export default function PlansScreen() {
           tintColor={colors.primary}
         />
       }
-      contentContainerStyle={{ padding: 16, paddingBottom: 32, flexGrow: 1 }}
+      contentContainerStyle={styles.content}
       ListHeaderComponent={
-        <View style={{ marginBottom: 8 }}>
-          <Text style={{ color: colors.text, fontSize: 22, fontWeight: '700' }}>
-            Your Plans
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 2 }}>
-            {plans?.length ?? 0} plan{(plans?.length ?? 0) !== 1 ? 's' : ''} assigned
+        <View style={styles.header}>
+          <Text style={styles.eyebrow}>Your Training</Text>
+          <Text style={styles.heading}>Plans</Text>
+          <Text style={styles.sub}>
+            {total} plan{total !== 1 ? 's' : ''} assigned
           </Text>
         </View>
       }
@@ -51,3 +53,30 @@ export default function PlansScreen() {
     />
   );
 }
+
+const styles = StyleSheet.create({
+  center: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
+  list: { backgroundColor: colors.background },
+  content: { padding: 16, paddingBottom: 32, flexGrow: 1 },
+  header: { marginBottom: 16 },
+  eyebrow: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  heading: {
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '800',
+    marginTop: 4,
+    letterSpacing: -0.6,
+  },
+  sub: {
+    color: colors.textMuted,
+    fontSize: 13,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+});

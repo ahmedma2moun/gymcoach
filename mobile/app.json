@@ -1,17 +1,17 @@
 {
   "expo": {
-    "name": "Antigravity Gym",
-    "slug": "antigravity-gym",
+    "name": "Gym Coach",
+    "slug": "gym-coach",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "antigravitygym",
+    "scheme": "gymcoach",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0d0d12"
+      "backgroundColor": "#0a0a12"
     },
     "ios": {
       "supportsTablet": false,
@@ -23,7 +23,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0d0d12"
+        "backgroundColor": "#0a0a12"
       },
       "permissions": [
         "android.permission.INTERNET"

@@ -60,7 +60,7 @@ export function Button({
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.75}
+      activeOpacity={0.85}
       style={[
         styles.button,
         { backgroundColor: bg[variant], borderColor: border[variant], borderWidth: border[variant] ? 1 : 0 },
@@ -84,12 +84,13 @@ export function Button({
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info';
 
 export function Badge({ label, variant = 'default' }: { label: string; variant?: BadgeVariant }) {
+  // Tinted backgrounds derived from the foreground color for a cohesive look.
   const bg: Record<BadgeVariant, string> = {
-    default: '#2a2a40',
-    success: '#064e3b',
-    warning: '#7c2d12',
-    danger: '#450a0a',
-    info: '#0c2a4a',
+    default: colors.surface2,
+    success: colors.success + '22',
+    warning: colors.warning + '22',
+    danger: colors.danger + '22',
+    info: colors.info + '22',
   };
   const fg: Record<BadgeVariant, string> = {
     default: colors.textMuted,
@@ -98,8 +99,15 @@ export function Badge({ label, variant = 'default' }: { label: string; variant?:
     danger: colors.danger,
     info: colors.info,
   };
+  const bd: Record<BadgeVariant, string> = {
+    default: colors.borderSubtle,
+    success: colors.success + '40',
+    warning: colors.warning + '40',
+    danger: colors.danger + '40',
+    info: colors.info + '40',
+  };
   return (
-    <View style={[styles.badge, { backgroundColor: bg[variant] }]}>
+    <View style={[styles.badge, { backgroundColor: bg[variant], borderColor: bd[variant] }]}>
       <Text style={[styles.badgeText, { color: fg[variant] }]}>{label}</Text>
     </View>
   );
@@ -122,6 +130,7 @@ export function SectionHeader({ title }: { title: string }) {
 export function EmptyState({ message }: { message: string }) {
   return (
     <View style={styles.emptyState}>
+      <View style={styles.emptyDot} />
       <Text style={styles.emptyStateText}>{message}</Text>
     </View>
   );
@@ -138,35 +147,44 @@ export function Separator() {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 18,
+    padding: 18,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
   button: {
-    borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    borderRadius: 14,
+    paddingVertical: 15,
+    paddingHorizontal: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    // subtle elevation on Android, soft shadow on iOS
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 2,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.45,
   },
   buttonText: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 15,
+    letterSpacing: 0.2,
   },
   badge: {
-    borderRadius: 6,
-    paddingHorizontal: 8,
+    borderRadius: 999,
+    paddingHorizontal: 10,
     paddingVertical: 3,
     alignSelf: 'flex-start',
+    borderWidth: 1,
   },
   badgeText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   muted: {
     color: colors.textMuted,
@@ -174,23 +192,34 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.8,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    marginBottom: 8,
+    marginBottom: 10,
     marginTop: 4,
   },
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
+    paddingVertical: 56,
+    gap: 10,
+  },
+  emptyDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
   emptyStateText: {
     color: colors.textMuted,
-    fontSize: 15,
+    fontSize: 14,
     textAlign: 'center',
+    paddingHorizontal: 24,
+    lineHeight: 20,
   },
   separator: {
     height: 1,

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useLayoutEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/auth/AuthContext';
 import { usePlans } from '@/src/hooks/usePlans';
 import { apiFetch } from '@/src/api/client';
@@ -78,6 +79,7 @@ export default function PlanDetailScreen() {
   const done = plan.exercises.filter((e) => e.done).length;
   const total = plan.exercises.length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const allDone = done === total && total > 0;
 
   return (
     <ScrollView
@@ -87,31 +89,37 @@ export default function PlanDetailScreen() {
         <RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={colors.primary} />
       }
     >
-      {/* Stats header */}
-      <View style={styles.statsCard}>
+      {/* Stats hero */}
+      <View style={[styles.statsCard, allDone && styles.statsCardDone]}>
         <View style={styles.statsRow}>
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{done}/{total}</Text>
+          <View style={styles.statBlock}>
+            <Text style={styles.statValue}>{done}<Text style={styles.statValueSub}>/{total}</Text></Text>
             <Text style={styles.statLabel}>Exercises</Text>
           </View>
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{pct}%</Text>
+          <View style={styles.divider} />
+          <View style={styles.statBlock}>
+            <Text style={[styles.statValue, allDone && { color: colors.success }]}>{pct}%</Text>
             <Text style={styles.statLabel}>Complete</Text>
           </View>
-          <Badge
-            label={done === total && total > 0 ? '✓ Done' : 'In Progress'}
-            variant={done === total && total > 0 ? 'success' : 'warning'}
-          />
+          <View style={styles.statBadgeWrap}>
+            <Badge
+              label={allDone ? '✓ Done' : 'In Progress'}
+              variant={allDone ? 'success' : 'warning'}
+            />
+          </View>
         </View>
 
         {/* Progress bar */}
         <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${pct}%` as any }]} />
+          <View style={[styles.progressFill, { width: `${pct}%` as any, backgroundColor: allDone ? colors.success : colors.primary }]} />
         </View>
       </View>
 
       {/* Exercises */}
-      <Text style={styles.sectionTitle}>Exercises</Text>
+      <View style={styles.sectionHeader}>
+        <Ionicons name="list-outline" size={14} color={colors.textMuted} />
+        <Text style={styles.sectionTitle}>Exercises</Text>
+      </View>
 
       {plan.exercises.length === 0 ? (
         <EmptyState message="No exercises in this plan." />
@@ -136,38 +144,71 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   statsCard: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 24,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    gap: 12,
+    gap: 14,
+  },
+  statsCardDone: {
+    borderColor: colors.success + '50',
+    backgroundColor: colors.success + '08',
   },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
   },
-  stat: { flex: 1 },
-  statValue: { color: colors.text, fontSize: 22, fontWeight: '700' },
-  statLabel: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  progressBar: {
-    height: 5,
+  statBlock: { flex: 1 },
+  statValue: {
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.8,
+  },
+  statValueSub: {
+    color: colors.textMuted,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  statLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginTop: 2,
+  },
+  divider: {
+    width: 1,
+    height: 36,
     backgroundColor: colors.borderSubtle,
-    borderRadius: 3,
+  },
+  statBadgeWrap: {
+    alignItems: 'flex-end',
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: colors.surface2,
+    borderRadius: 4,
     overflow: 'hidden',
   },
   progressFill: {
-    height: 5,
-    backgroundColor: colors.primary,
-    borderRadius: 3,
+    height: 8,
+    borderRadius: 4,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
   },
   sectionTitle: {
     color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.8,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    marginBottom: 10,
   },
 });

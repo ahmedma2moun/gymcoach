@@ -8,6 +8,7 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/auth/AuthContext';
 import { usePlans } from '@/src/hooks/usePlans';
 import { colors } from '@/src/theme/colors';
@@ -155,6 +156,7 @@ export default function AnalyticsScreen() {
         <RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={colors.primary} />
       }
     >
+      <Text style={s.eyebrow}>Insights</Text>
       <Text style={s.heading}>Analytics</Text>
       <Text style={s.sub}>Your performance over time</Text>
 
@@ -177,6 +179,7 @@ export default function AnalyticsScreen() {
                 key={m}
                 onPress={() => setSelectedMonth(m)}
                 style={[s.monthBtn, m === activeMonth && s.monthBtnActive]}
+                activeOpacity={0.85}
               >
                 <Text style={[s.monthBtnText, m === activeMonth && s.monthBtnTextActive]}>
                   {lbl}
@@ -195,8 +198,11 @@ export default function AnalyticsScreen() {
           <Text style={s.sectionTitle}>{monthLabel} Overview</Text>
           <View style={s.statRow}>
             <View style={s.statCard}>
+              <View style={s.statIconWrap}>
+                <Ionicons name="trending-up" size={14} color={colors.primary} />
+              </View>
               <Text style={s.statValue}>{stats.completionRate}%</Text>
-              <Text style={s.statLabel}>Completion Rate</Text>
+              <Text style={s.statLabel}>Completion</Text>
               <View style={s.progressTrack}>
                 <View
                   style={[
@@ -207,40 +213,55 @@ export default function AnalyticsScreen() {
               </View>
             </View>
             <View style={s.statCard}>
+              <View style={s.statIconWrap}>
+                <Ionicons name="checkmark-done" size={14} color={colors.success} />
+              </View>
               <Text style={s.statValue}>
                 {stats.completedPlans.length}/{stats.monthPlans.length}
               </Text>
-              <Text style={s.statLabel}>Sessions Done</Text>
+              <Text style={s.statLabel}>Sessions</Text>
             </View>
             <View style={s.statCard}>
+              <View style={s.statIconWrap}>
+                <Ionicons name="barbell" size={14} color={colors.info} />
+              </View>
               <Text style={s.statValue}>{stats.totalExercises}</Text>
-              <Text style={s.statLabel}>Exercises Done</Text>
+              <Text style={s.statLabel}>Exercises</Text>
             </View>
           </View>
 
           {/* Streaks */}
           <Text style={s.sectionTitle}>Streaks & Consistency</Text>
           <View style={s.statRow}>
-            <View style={s.statCard}>
+            <View style={[s.statCard, s.statCardHero]}>
+              <View style={[s.statIconWrap, { backgroundColor: colors.primary + '22' }]}>
+                <Ionicons name="flame" size={14} color={colors.primary} />
+              </View>
               <Text style={[s.statValue, { color: colors.primary }]}>
                 {stats.currentStreak}
               </Text>
               <Text style={s.statLabel}>Current Streak</Text>
             </View>
             <View style={s.statCard}>
+              <View style={s.statIconWrap}>
+                <Ionicons name="trophy-outline" size={14} color={colors.warning} />
+              </View>
               <Text style={s.statValue}>{stats.bestStreak}</Text>
               <Text style={s.statLabel}>Best Streak</Text>
             </View>
             <View style={s.statCard}>
+              <View style={s.statIconWrap}>
+                <Ionicons name="bookmark-outline" size={14} color={colors.secondary} />
+              </View>
               <Text style={s.statValue}>{stats.allCompleted.length}</Text>
-              <Text style={s.statLabel}>Total Sessions</Text>
+              <Text style={s.statLabel}>Total</Text>
             </View>
           </View>
 
           {/* Sessions by training type */}
           {stats.sortedTypes.length > 0 && (
             <>
-              <Text style={s.sectionTitle}>Sessions by Training Type</Text>
+              <Text style={s.sectionTitle}>Sessions by Type</Text>
               <View style={s.section}>
                 {stats.sortedTypes.map(([title, count]) => (
                   <View key={title} style={s.barRow}>
@@ -273,18 +294,22 @@ export default function AnalyticsScreen() {
                   key={plan.id}
                   style={[
                     s.recentItem,
-                    idx === stats.recentSessions.length - 1 && { borderBottomWidth: 0 },
+                    idx === stats.recentSessions.length - 1 && { borderBottomWidth: 0, paddingBottom: 0 },
                   ]}
                 >
-                  <Text style={s.recentDate}>
-                    {new Date(plan.date!).toLocaleDateString('default', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                  </Text>
-                  <Text style={s.recentTitle}>{plan.title}</Text>
-                  <Text style={s.recentCount}>{plan.exercises.length} exercises</Text>
+                  <View style={s.recentDot} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.recentTitle}>{plan.title}</Text>
+                    <Text style={s.recentMeta}>
+                      {new Date(plan.date!).toLocaleDateString('default', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                      {' · '}
+                      {plan.exercises.length} exercises
+                    </Text>
+                  </View>
                 </View>
               ))}
             </View>
@@ -299,75 +324,130 @@ const s = StyleSheet.create({
   center: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
   scroll: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 40 },
-  heading: { color: colors.text, fontSize: 22, fontWeight: '700' },
-  sub: { color: colors.textMuted, fontSize: 13, marginTop: 2, marginBottom: 16 },
+  eyebrow: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  heading: {
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '800',
+    marginTop: 4,
+    letterSpacing: -0.6,
+  },
+  sub: {
+    color: colors.textMuted,
+    fontSize: 13,
+    marginTop: 4,
+    marginBottom: 16,
+    fontWeight: '500',
+  },
   monthBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 999,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  monthBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  monthBtnText: { color: colors.textMuted, fontSize: 13, fontWeight: '500' },
+  monthBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  monthBtnText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   monthBtnTextActive: { color: '#fff' },
   sectionTitle: {
-    color: colors.text,
-    fontSize: 15,
+    color: colors.textMuted,
+    fontSize: 11,
     fontWeight: '700',
     marginBottom: 10,
     marginTop: 8,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
   statRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   statCard: {
     flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    alignItems: 'center',
-    gap: 4,
+    alignItems: 'flex-start',
+    gap: 6,
   },
-  statValue: { color: colors.text, fontSize: 20, fontWeight: '700' },
-  statLabel: { color: colors.textMuted, fontSize: 10, textAlign: 'center' },
+  statCardHero: {
+    borderColor: colors.primary + '40',
+    backgroundColor: colors.primary + '08',
+  },
+  statIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  statValue: {
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  statLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
   progressTrack: {
     height: 4,
-    backgroundColor: colors.border,
+    backgroundColor: colors.surface2,
     borderRadius: 2,
     width: '100%',
-    marginTop: 4,
+    marginTop: 6,
     overflow: 'hidden',
   },
   progressFill: { height: 4, backgroundColor: colors.primary, borderRadius: 2 },
   section: {
     backgroundColor: colors.surface,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    gap: 10,
+    gap: 12,
     marginBottom: 16,
   },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  barLabel: { color: colors.text, fontSize: 12, width: 80 },
+  barLabel: { color: colors.text, fontSize: 12, width: 80, fontWeight: '500' },
   barTrack: {
     flex: 1,
     height: 8,
-    backgroundColor: colors.border,
+    backgroundColor: colors.surface2,
     borderRadius: 4,
     overflow: 'hidden',
   },
   barFill: { height: 8, backgroundColor: colors.primary, borderRadius: 4 },
-  barCount: { color: colors.textMuted, fontSize: 12, width: 20, textAlign: 'right' },
+  barCount: { color: colors.textSub, fontSize: 12, width: 24, textAlign: 'right', fontWeight: '600' },
   recentItem: {
-    paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },
-  recentDate: { color: colors.textMuted, fontSize: 11 },
-  recentTitle: { color: colors.text, fontWeight: '600', fontSize: 14, marginTop: 1 },
-  recentCount: { color: colors.textMuted, fontSize: 12, marginTop: 1 },
+  recentDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.success,
+  },
+  recentTitle: { color: colors.text, fontWeight: '600', fontSize: 14 },
+  recentMeta: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   empty: { color: colors.textMuted, fontSize: 14, textAlign: 'center', marginTop: 40 },
 });

@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/auth/AuthContext';
 import { colors } from '@/src/theme/colors';
@@ -16,11 +17,29 @@ export default function TabLayout() {
           backgroundColor: colors.surface,
           borderTopColor: colors.borderSubtle,
           borderTopWidth: 1,
+          paddingTop: 6,
+          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+          height: Platform.OS === 'ios' ? 84 : 64,
         },
-        headerStyle: { backgroundColor: colors.background },
+        tabBarItemStyle: {
+          paddingVertical: 4,
+        },
+        headerStyle: {
+          backgroundColor: colors.background,
+          borderBottomWidth: 0,
+        },
         headerTintColor: colors.text,
+        headerTitleStyle: {
+          fontWeight: '700',
+          fontSize: 17,
+          letterSpacing: -0.2,
+        },
         headerShadowVisible: false,
-        tabBarLabelStyle: { fontSize: 11 },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+          letterSpacing: 0.2,
+        },
       }}
     >
       {/* ── Member tabs ──────────────────────────────────────────── */}

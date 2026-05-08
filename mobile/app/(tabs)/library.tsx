@@ -31,17 +31,20 @@ function ExerciseRow({
 }) {
   return (
     <View style={styles.row}>
+      <View style={styles.exIcon}>
+        <Ionicons name="barbell-outline" size={16} color={colors.primary} />
+      </View>
       <Text style={styles.exName} numberOfLines={1}>
         {ex.name}
       </Text>
       {ex.videoUrl ? (
-        <Ionicons name="play-circle-outline" size={18} color={colors.info} style={{ marginRight: 4 }} />
+        <Ionicons name="play-circle" size={20} color={colors.info} style={{ marginRight: 6 }} />
       ) : null}
-      <TouchableOpacity onPress={onEdit} style={styles.iconBtn}>
-        <Ionicons name="pencil-outline" size={18} color={colors.textMuted} />
+      <TouchableOpacity onPress={onEdit} style={styles.iconBtn} activeOpacity={0.7}>
+        <Ionicons name="pencil-outline" size={17} color={colors.textSub} />
       </TouchableOpacity>
-      <TouchableOpacity onPress={onDelete} style={styles.iconBtn}>
-        <Ionicons name="trash-outline" size={18} color={colors.danger} />
+      <TouchableOpacity onPress={onDelete} style={styles.iconBtn} activeOpacity={0.7}>
+        <Ionicons name="trash-outline" size={17} color={colors.danger} />
       </TouchableOpacity>
     </View>
   );
@@ -122,27 +125,34 @@ export default function LibraryScreen() {
   return (
     <>
       <FlatList
+        style={styles.list}
         data={filtered}
         keyExtractor={(e) => e.id}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={colors.primary} />
         }
-        contentContainerStyle={{ padding: 16, paddingBottom: 40, flexGrow: 1 }}
+        contentContainerStyle={styles.content}
         ListHeaderComponent={
-          <View style={{ marginBottom: 12, gap: 10 }}>
+          <View style={styles.headerWrap}>
             <View style={styles.headerRow}>
-              <Text style={styles.heading}>Exercise Library</Text>
-              <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
+              <View>
+                <Text style={styles.eyebrow}>Catalog</Text>
+                <Text style={styles.heading}>Exercise Library</Text>
+              </View>
+              <TouchableOpacity style={styles.addBtn} onPress={openCreate} activeOpacity={0.85}>
                 <Ionicons name="add" size={22} color="#fff" />
               </TouchableOpacity>
             </View>
-            <TextInput
-              style={styles.search}
-              placeholder="Search…"
-              placeholderTextColor={colors.textDim}
-              value={search}
-              onChangeText={setSearch}
-            />
+            <View style={styles.searchWrap}>
+              <Ionicons name="search-outline" size={16} color={colors.textMuted} style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.search}
+                placeholder="Search exercises…"
+                placeholderTextColor={colors.textDim}
+                value={search}
+                onChangeText={setSearch}
+              />
+            </View>
             <Text style={styles.count}>{filtered.length} exercise{filtered.length !== 1 ? 's' : ''}</Text>
           </View>
         }
@@ -158,6 +168,7 @@ export default function LibraryScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={styles.modalContent}>
+            <View style={styles.handle} />
             <Text style={styles.modalTitle}>{editing ? 'Edit Exercise' : 'New Exercise'}</Text>
 
             <Text style={styles.label}>Name</Text>
@@ -194,56 +205,110 @@ export default function LibraryScreen() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
+  list: { backgroundColor: colors.background },
+  content: { padding: 16, paddingBottom: 40, flexGrow: 1 },
+  headerWrap: { marginBottom: 12, gap: 12 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  heading: { color: colors.text, fontSize: 22, fontWeight: '700' },
+  eyebrow: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  heading: {
+    color: colors.text,
+    fontSize: 26,
+    fontWeight: '800',
+    marginTop: 4,
+    letterSpacing: -0.5,
+  },
   addBtn: {
     backgroundColor: colors.primary,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  search: {
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    padding: 12,
-    color: colors.text,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  count: { color: colors.textMuted, fontSize: 13 },
-  row: {
+  searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  search: {
+    flex: 1,
+    paddingVertical: 12,
+    color: colors.text,
+    fontSize: 14,
+  },
+  count: { color: colors.textMuted, fontSize: 12, fontWeight: '500' },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 14,
     padding: 14,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
-  exName: { color: colors.text, fontSize: 14, fontWeight: '500', flex: 1 },
+  exIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: colors.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  exName: { color: colors.text, fontSize: 14, fontWeight: '600', flex: 1 },
   iconBtn: { padding: 6 },
-  modalOverlay: { flex: 1, backgroundColor: '#000000aa', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: '#000000bb', justifyContent: 'flex-end' },
   modalContent: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: 24,
     gap: 8,
+    paddingBottom: 40,
+    borderTopWidth: 1,
+    borderColor: colors.borderSubtle,
   },
-  modalTitle: { color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: 8 },
-  label: { color: colors.textSub, fontSize: 13, fontWeight: '600', marginTop: 4 },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  modalTitle: { color: colors.text, fontSize: 20, fontWeight: '800', marginBottom: 8, letterSpacing: -0.3 },
+  label: {
+    color: colors.textSub,
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 8,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
   input: {
     backgroundColor: colors.surface2,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 14,
     color: colors.text,
     fontSize: 15,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
 });

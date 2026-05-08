@@ -1,24 +1,35 @@
+// Gym Coach — design tokens
+
 export const colors = {
-  background: '#0d0d12',
-  surface: '#13131e',
-  surface2: '#1a1a28',
-  surfaceHover: '#222235',
-  primary: '#ff6b35',
-  primaryDark: '#e05520',
-  primaryLight: '#ff8f65',
-  secondary: '#9b5de5',
-  secondaryDark: '#7c3aed',
-  success: '#06d6a0',
-  successDark: '#04b889',
-  accent: '#f72585',
-  info: '#4cc9f0',
-  danger: '#ef4444',
+  // ── Surfaces ────────────────────────────────────────────────────────────────
+  background: '#0a0a12',     // deep neutral, slight cool undertone
+  surface: '#14141f',        // primary card surface
+  surface2: '#1c1c2b',       // raised / nested surface
+  surfaceHover: '#262638',   // pressed / hover state
+
+  // ── Brand ───────────────────────────────────────────────────────────────────
+  primary: '#ff7849',        // refined athletic coral
+  primaryDark: '#e85a2a',
+  primaryLight: '#ffa07a',
+  secondary: '#a78bfa',      // soft violet
+  secondaryDark: '#8b5cf6',
+
+  // ── Status ──────────────────────────────────────────────────────────────────
+  success: '#10d4a8',        // vibrant teal-emerald
+  successDark: '#0eaa86',
+  accent: '#fb6da3',         // soft fuchsia accent
+  info: '#5ec5f0',           // calm cyan
+  danger: '#f87171',
   dangerDark: '#dc2626',
   warning: '#fbbf24',
-  text: '#ffffff',
-  textSub: '#c4c4d8',
-  textMuted: '#7878a0',
-  textDim: '#4a4a6a',
-  border: '#2a2a40',
-  borderSubtle: '#1e1e30',
+
+  // ── Text ────────────────────────────────────────────────────────────────────
+  text: '#fafafe',           // near-white
+  textSub: '#d0d0e2',        // primary subtext
+  textMuted: '#7d7d9a',      // muted helper text
+  textDim: '#4d4d68',        // disabled / placeholder
+
+  // ── Lines ───────────────────────────────────────────────────────────────────
+  border: '#2e2e42',         // standard border
+  borderSubtle: '#1f1f30',   // hairline border on cards
 } as const;
