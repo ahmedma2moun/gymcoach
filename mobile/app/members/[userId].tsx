@@ -33,7 +33,7 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 const SCREEN_W = Dimensions.get('window').width;
-const CELL_W = Math.floor((SCREEN_W - 80) / 7); // modal has extra padding
+const CELL_W = Math.floor((SCREEN_W - 80) / 7);
 
 type ExerciseForm = {
   name: string;
@@ -41,9 +41,12 @@ type ExerciseForm = {
   reps: string;
   coachNote: string;
   videoUrl: string;
+  supersetId?: string | null;
 };
 
-const defaultEx = (): ExerciseForm => ({ name: '', sets: '3', reps: '10', coachNote: '', videoUrl: '' });
+const defaultEx = (): ExerciseForm => ({
+  name: '', sets: '3', reps: '10', coachNote: '', videoUrl: '', supersetId: null,
+});
 
 // ── Date helper ───────────────────────────────────────────────────────────────
 function toLocalISO(year: number, month: number, day: number) {
@@ -136,6 +139,13 @@ function ExerciseRow({
   onUpdate,
   onRemove,
   canRemove,
+  isFirst,
+  isLast,
+  onMoveUp,
+  onMoveDown,
+  isSelected,
+  onToggleSelect,
+  inSuperset,
 }: {
   ex: ExerciseForm;
   index: number;
@@ -143,6 +153,13 @@ function ExerciseRow({
   onUpdate: (field: keyof ExerciseForm, value: string) => void;
   onRemove: () => void;
   canRemove: boolean;
+  isFirst: boolean;
+  isLast: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  inSuperset?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
 
@@ -156,12 +173,47 @@ function ExerciseRow({
   const showDropdown = focused && suggestions.length > 0;
 
   return (
-    <View style={es.block}>
+    <View style={[es.block, inSuperset && es.blockInSuperset, isSelected && es.blockSelected]}>
       <View style={es.header}>
+        {!inSuperset && (
+          <TouchableOpacity
+            onPress={onToggleSelect}
+            style={[es.selectBtn, isSelected && es.selectBtnActive]}
+            hitSlop={8}
+            activeOpacity={0.7}
+          >
+            {isSelected && <Ionicons name="checkmark" size={11} color="#fff" />}
+          </TouchableOpacity>
+        )}
+
         <View style={es.indexBadge}>
           <Text style={es.indexBadgeTxt}>{index + 1}</Text>
         </View>
         <Text style={es.indexLabel}>Exercise {index + 1}</Text>
+
+        {!inSuperset && (
+          <>
+            <TouchableOpacity
+              onPress={onMoveUp}
+              disabled={isFirst}
+              hitSlop={8}
+              style={[es.moveBtn, isFirst && es.moveBtnDisabled]}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chevron-up" size={16} color={isFirst ? colors.textDim : colors.textSub} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onMoveDown}
+              disabled={isLast}
+              hitSlop={8}
+              style={[es.moveBtn, isLast && es.moveBtnDisabled]}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chevron-down" size={16} color={isLast ? colors.textDim : colors.textSub} />
+            </TouchableOpacity>
+          </>
+        )}
+
         <View style={{ flex: 1 }} />
         {canRemove && (
           <TouchableOpacity onPress={onRemove} hitSlop={8}>
@@ -242,17 +294,14 @@ export default function MemberPlansScreen() {
   const { data: plans, isLoading, isRefreshing, refresh, reload } = usePlans(userId);
   const { data: library } = useLibrary();
 
-  // Modal step: closed → calendar → form
   const [step, setStep] = useState<'closed' | 'calendar' | 'form'>('closed');
   const [planDate, setPlanDate] = useState<string | null>(null);
   const [planTitle, setPlanTitle] = useState('');
   const [exercises, setExercises] = useState<ExerciseForm[]>([defaultEx()]);
   const [saving, setSaving] = useState(false);
+  const [selectedExercises, setSelectedExercises] = useState<number[]>([]);
 
-  // Clone to same user
   const [cloningPlan, setCloningPlan] = useState<Plan | null>(null);
-
-  // Clone to another user
   const [cloneToUserPlan, setCloneToUserPlan] = useState<Plan | null>(null);
   const [cloneUserStep, setCloneUserStep] = useState<'select' | 'date'>('select');
   const [cloneTargetUserId, setCloneTargetUserId] = useState('');
@@ -262,7 +311,6 @@ export default function MemberPlansScreen() {
     if (member) navigation.setOptions({ title: member.username });
   }, [member, navigation]);
 
-  // Set of ISO dates that already have plans (for calendar highlights)
   const planDates = useMemo(() => {
     const set = new Set<string>();
     (plans ?? []).forEach(p => {
@@ -271,11 +319,245 @@ export default function MemberPlansScreen() {
     return set;
   }, [plans]);
 
+  // ── Superset / reorder helpers ─────────────────────────────────────────────
+
+  function getLogicalUnit(index: number) {
+    const ex = exercises[index];
+    if (!ex) return { indices: [] as number[], supersetId: null as string | null };
+    if (!ex.supersetId) return { indices: [index], supersetId: null };
+
+    const indices: number[] = [];
+    exercises.forEach((e, idx) => {
+      if (e.supersetId === ex.supersetId) indices.push(idx);
+    });
+    return { indices: indices.sort((a, b) => a - b), supersetId: ex.supersetId };
+  }
+
+  function getAllLogicalUnits() {
+    const units: { startIndex: number; endIndex: number; supersetId: string | null }[] = [];
+    const processed = new Set<number>();
+
+    exercises.forEach((_, idx) => {
+      if (processed.has(idx)) return;
+      const unit = getLogicalUnit(idx);
+      unit.indices.forEach(i => processed.add(i));
+      units.push({
+        startIndex: Math.min(...unit.indices),
+        endIndex: Math.max(...unit.indices),
+        supersetId: unit.supersetId,
+      });
+    });
+
+    return units;
+  }
+
+  function isFirstUnit(index: number) {
+    const allUnits = getAllLogicalUnits();
+    if (allUnits.length === 0) return true;
+    const unit = getLogicalUnit(index);
+    return unit.indices.includes(allUnits[0].startIndex);
+  }
+
+  function isLastUnit(index: number) {
+    const allUnits = getAllLogicalUnits();
+    if (allUnits.length === 0) return true;
+    const unit = getLogicalUnit(index);
+    return unit.indices.includes(allUnits[allUnits.length - 1].startIndex);
+  }
+
+  function moveExerciseUp(index: number) {
+    const currentUnit = getLogicalUnit(index);
+    const allUnits = getAllLogicalUnits();
+    const currentUnitIndex = allUnits.findIndex(u => currentUnit.indices.includes(u.startIndex));
+    if (currentUnitIndex === 0) return;
+
+    const previousUnit = allUnits[currentUnitIndex - 1];
+    const currentExercises = currentUnit.indices.map(i => exercises[i]);
+    const previousExercises: ExerciseForm[] = [];
+    for (let i = previousUnit.startIndex; i <= previousUnit.endIndex; i++) {
+      previousExercises.push(exercises[i]);
+    }
+
+    const newExercises: ExerciseForm[] = [];
+    for (let i = 0; i < previousUnit.startIndex; i++) newExercises.push(exercises[i]);
+    currentExercises.forEach(e => newExercises.push(e));
+    previousExercises.forEach(e => newExercises.push(e));
+    for (let i = currentUnit.indices[currentUnit.indices.length - 1] + 1; i < exercises.length; i++) {
+      newExercises.push(exercises[i]);
+    }
+
+    setExercises(newExercises);
+    setSelectedExercises([]);
+  }
+
+  function moveExerciseDown(index: number) {
+    const currentUnit = getLogicalUnit(index);
+    const allUnits = getAllLogicalUnits();
+    const currentUnitIndex = allUnits.findIndex(u => currentUnit.indices.includes(u.startIndex));
+    if (currentUnitIndex === allUnits.length - 1) return;
+
+    const nextUnit = allUnits[currentUnitIndex + 1];
+    const currentExercises = currentUnit.indices.map(i => exercises[i]);
+    const nextExercises: ExerciseForm[] = [];
+    for (let i = nextUnit.startIndex; i <= nextUnit.endIndex; i++) {
+      nextExercises.push(exercises[i]);
+    }
+
+    const newExercises: ExerciseForm[] = [];
+    for (let i = 0; i < currentUnit.indices[0]; i++) newExercises.push(exercises[i]);
+    nextExercises.forEach(e => newExercises.push(e));
+    currentExercises.forEach(e => newExercises.push(e));
+    for (let i = nextUnit.endIndex + 1; i < exercises.length; i++) newExercises.push(exercises[i]);
+
+    setExercises(newExercises);
+    setSelectedExercises([]);
+  }
+
+  function handleCreateSuperset() {
+    if (selectedExercises.length < 2) return;
+    const supersetId = 'ss-' + Date.now();
+    const sortedIndices = [...selectedExercises].sort((a, b) => a - b);
+    const insertIndex = sortedIndices[0];
+    const exercisesToGroup = sortedIndices.map(idx => exercises[idx]);
+
+    const newOrder: ExerciseForm[] = [];
+    let groupInserted = false;
+
+    for (let i = 0; i < exercises.length; i++) {
+      if (i === insertIndex && !groupInserted) {
+        exercisesToGroup.forEach(e => newOrder.push({ ...e, supersetId }));
+        groupInserted = true;
+      }
+      if (!selectedExercises.includes(i)) {
+        newOrder.push(exercises[i]);
+      }
+    }
+
+    setExercises(newOrder);
+    setSelectedExercises([]);
+  }
+
+  function handleUngroupSuperset(supersetId: string) {
+    setExercises(prev =>
+      prev.map(e => e.supersetId === supersetId ? { ...e, supersetId: null } : e)
+    );
+  }
+
+  function toggleSelectExercise(idx: number) {
+    setSelectedExercises(prev =>
+      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+    );
+  }
+
+  // ── Exercises rendering (groups supersets) ─────────────────────────────────
+  function renderExercisesWithSupersets() {
+    const result: React.ReactNode[] = [];
+    let i = 0;
+
+    while (i < exercises.length) {
+      const ex = exercises[i];
+
+      if (ex.supersetId) {
+        const sid = ex.supersetId;
+        const group: { ex: ExerciseForm; idx: number }[] = [];
+
+        while (i < exercises.length && exercises[i].supersetId === sid) {
+          group.push({ ex: exercises[i], idx: i });
+          i++;
+        }
+
+        const firstIdx = group[0].idx;
+        const groupIsFirst = isFirstUnit(firstIdx);
+        const groupIsLast = isLastUnit(firstIdx);
+
+        result.push(
+          <View key={`ss-${sid}`} style={es.supersetGroup}>
+            <View style={es.supersetHeader}>
+              <Ionicons name="link-outline" size={12} color={colors.warning} />
+              <Text style={es.supersetTitle}>Superset</Text>
+              <View style={{ flex: 1 }} />
+              <TouchableOpacity
+                onPress={() => moveExerciseUp(firstIdx)}
+                disabled={groupIsFirst}
+                hitSlop={8}
+                style={[es.moveBtn, groupIsFirst && es.moveBtnDisabled]}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chevron-up" size={16} color={groupIsFirst ? colors.textDim : colors.textSub} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => moveExerciseDown(firstIdx)}
+                disabled={groupIsLast}
+                hitSlop={8}
+                style={[es.moveBtn, groupIsLast && es.moveBtnDisabled]}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chevron-down" size={16} color={groupIsLast ? colors.textDim : colors.textSub} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleUngroupSuperset(sid)}
+                hitSlop={8}
+                style={es.ungroupBtn}
+                activeOpacity={0.7}
+              >
+                <Text style={es.ungroupTxt}>Ungroup</Text>
+              </TouchableOpacity>
+            </View>
+
+            {group.map(({ ex: item, idx }) => (
+              <ExerciseRow
+                key={idx}
+                ex={item}
+                index={idx}
+                library={library ?? []}
+                onUpdate={(field, value) => updateExercise(idx, field, value)}
+                onRemove={() => removeExercise(idx)}
+                canRemove={exercises.length > 1}
+                isFirst={false}
+                isLast={false}
+                onMoveUp={() => {}}
+                onMoveDown={() => {}}
+                isSelected={false}
+                onToggleSelect={() => {}}
+                inSuperset
+              />
+            ))}
+          </View>
+        );
+      } else {
+        const idx = i;
+        result.push(
+          <ExerciseRow
+            key={idx}
+            ex={ex}
+            index={idx}
+            library={library ?? []}
+            onUpdate={(field, value) => updateExercise(idx, field, value)}
+            onRemove={() => removeExercise(idx)}
+            canRemove={exercises.length > 1}
+            isFirst={isFirstUnit(idx)}
+            isLast={isLastUnit(idx)}
+            onMoveUp={() => moveExerciseUp(idx)}
+            onMoveDown={() => moveExerciseDown(idx)}
+            isSelected={selectedExercises.includes(idx)}
+            onToggleSelect={() => toggleSelectExercise(idx)}
+          />
+        );
+        i++;
+      }
+    }
+
+    return result;
+  }
+
+  // ── Form actions ───────────────────────────────────────────────────────────
+
   function openCalendar() {
     setCloningPlan(null);
     setPlanDate(null);
     setPlanTitle('');
     setExercises([defaultEx()]);
+    setSelectedExercises([]);
     setStep('calendar');
   }
 
@@ -304,6 +586,7 @@ export default function MemberPlansScreen() {
             sets: e.sets,
             reps: e.reps,
             coachNote: e.coachNote || undefined,
+            supersetId: e.supersetId || null,
             done: false,
           })),
         }),
@@ -347,6 +630,7 @@ export default function MemberPlansScreen() {
 
   function removeExercise(i: number) {
     setExercises(prev => prev.filter((_, idx) => idx !== i));
+    setSelectedExercises(prev => prev.filter(idx => idx !== i).map(idx => idx > i ? idx - 1 : idx));
   }
 
   function updateExercise(i: number, field: keyof ExerciseForm, value: string) {
@@ -371,12 +655,14 @@ export default function MemberPlansScreen() {
             reps: e.reps,
             coachNote: e.coachNote.trim() || undefined,
             videoUrl: e.videoUrl.trim() || undefined,
+            supersetId: e.supersetId || null,
           })),
         }),
       });
       setStep('closed');
       setPlanTitle('');
       setExercises([defaultEx()]);
+      setSelectedExercises([]);
       reload();
     } catch (e: any) {
       Alert.alert('Error', e.message);
@@ -462,7 +748,7 @@ export default function MemberPlansScreen() {
         )}
       />
 
-      {/* ── Step 1: Calendar date picker (create or clone-same-user) ── */}
+      {/* ── Step 1: Calendar date picker ── */}
       <Modal visible={step === 'calendar'} animationType="slide" transparent onRequestClose={() => { setStep('closed'); setCloningPlan(null); }}>
         <View style={s.modalOverlay}>
           <View style={[s.modalContent, { paddingBottom: 24 }]}>
@@ -574,7 +860,6 @@ export default function MemberPlansScreen() {
           <View style={s.modalContent}>
             <View style={s.modalHandle} />
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              {/* Header */}
               <View style={s.formHeader}>
                 <TouchableOpacity onPress={() => setStep('calendar')} style={s.backRow}>
                   <Ionicons name="chevron-back" size={18} color={colors.primary} />
@@ -597,19 +882,21 @@ export default function MemberPlansScreen() {
                 onChangeText={setPlanTitle}
               />
 
-              <Text style={[s.label, { marginTop: 16 }]}>Exercises</Text>
+              <View style={es.exercisesHeader}>
+                <Text style={s.label}>Exercises</Text>
+                {selectedExercises.length >= 2 && (
+                  <TouchableOpacity
+                    style={es.supersetBtn}
+                    onPress={handleCreateSuperset}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="link-outline" size={13} color={colors.warning} />
+                    <Text style={es.supersetBtnTxt}>Create Superset ({selectedExercises.length})</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
 
-              {exercises.map((ex, i) => (
-                <ExerciseRow
-                  key={i}
-                  ex={ex}
-                  index={i}
-                  library={library ?? []}
-                  onUpdate={(field, value) => updateExercise(i, field, value)}
-                  onRemove={() => removeExercise(i)}
-                  canRemove={exercises.length > 1}
-                />
-              ))}
+              {renderExercisesWithSupersets()}
 
               <TouchableOpacity style={s.addExBtn} onPress={addExercise} activeOpacity={0.7}>
                 <Ionicons name="add-circle" size={18} color={colors.primary} />
@@ -617,7 +904,7 @@ export default function MemberPlansScreen() {
               </TouchableOpacity>
 
               <View style={s.modalActions}>
-                <Button label="Cancel" variant="ghost" onPress={() => setStep('closed')} style={{ flex: 1 }} />
+                <Button label="Cancel" variant="ghost" onPress={() => { setStep('closed'); setSelectedExercises([]); }} style={{ flex: 1 }} />
                 <Button label="Create Plan" onPress={handleCreate} loading={saving} style={{ flex: 1 }} />
               </View>
             </ScrollView>
@@ -783,11 +1070,50 @@ const es = StyleSheet.create({
     padding: 14, marginBottom: 10,
     borderWidth: 1, borderColor: colors.borderSubtle,
   },
+  blockInSuperset: {
+    borderRadius: 10,
+    marginBottom: 6,
+    borderColor: colors.warning + '30',
+    backgroundColor: colors.warning + '06',
+  },
+  blockSelected: {
+    borderColor: colors.primary + '80',
+    backgroundColor: colors.primary + '08',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     marginBottom: 12,
+  },
+  selectBtn: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  selectBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  moveBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  moveBtnDisabled: {
+    opacity: 0.3,
   },
   indexBadge: {
     width: 22,
@@ -822,4 +1148,67 @@ const es = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   dropText: { color: colors.text, fontSize: 14 },
+
+  // Exercises section header (label + create superset btn)
+  exercisesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    marginBottom: 0,
+  },
+  supersetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.warning + '18',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: colors.warning + '50',
+  },
+  supersetBtnTxt: {
+    color: colors.warning,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+
+  // Superset group container
+  supersetGroup: {
+    borderWidth: 1.5,
+    borderColor: colors.warning + '50',
+    borderRadius: 14,
+    borderStyle: 'dashed',
+    padding: 10,
+    marginBottom: 10,
+    backgroundColor: colors.warning + '04',
+  },
+  supersetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  supersetTitle: {
+    color: colors.warning,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  ungroupBtn: {
+    backgroundColor: colors.danger + '15',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: colors.danger + '40',
+  },
+  ungroupTxt: {
+    color: colors.danger,
+    fontSize: 11,
+    fontWeight: '700',
+  },
 });

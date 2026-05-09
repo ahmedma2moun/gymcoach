@@ -12,10 +12,75 @@ import { useLayoutEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/auth/AuthContext';
 import { usePlans } from '@/src/hooks/usePlans';
+import { useExerciseHistory } from '@/src/hooks/useExerciseHistory';
 import { apiFetch } from '@/src/api/client';
 import { ExerciseItem } from '@/src/components/ExerciseItem';
 import { Badge, EmptyState } from '@/src/components/ui';
 import { colors } from '@/src/theme/colors';
+import type { PlanExercise, ExerciseHistory } from '@/src/types/api';
+
+function renderExercises(
+  exercises: PlanExercise[],
+  planId: string,
+  history: ExerciseHistory,
+  onToggleDone: (index: number, done: boolean, weightKg: string, weightLbs: string, userNote: string) => Promise<void>,
+) {
+  const result: React.ReactNode[] = [];
+  let i = 0;
+
+  while (i < exercises.length) {
+    const ex = exercises[i];
+
+    if (ex.supersetId) {
+      const sid = ex.supersetId;
+      const group: { ex: PlanExercise; idx: number }[] = [];
+
+      while (i < exercises.length && exercises[i].supersetId === sid) {
+        group.push({ ex: exercises[i], idx: i });
+        i++;
+      }
+
+      result.push(
+        <View key={`ss-${sid}`} style={styles.supersetGroup}>
+          <View style={styles.supersetLabel}>
+            <Ionicons name="link-outline" size={12} color={colors.warning} />
+            <Text style={styles.supersetLabelTxt}>Superset</Text>
+          </View>
+          {group.map(({ ex: item, idx }) => {
+            const entries = history[item.name] ?? [];
+            const lastEntry = entries[entries.length - 1];
+            return (
+              <ExerciseItem
+                key={`${planId}-${idx}`}
+                exercise={item}
+                index={idx}
+                planId={planId}
+                lastEntry={lastEntry}
+                onToggleDone={onToggleDone}
+              />
+            );
+          })}
+        </View>
+      );
+    } else {
+      const entries = history[ex.name] ?? [];
+      const lastEntry = entries[entries.length - 1];
+      result.push(
+        <ExerciseItem
+          key={`${planId}-${i}`}
+          exercise={ex}
+          index={i}
+          planId={planId}
+          lastEntry={lastEntry}
+          onToggleDone={onToggleDone}
+        />
+      );
+      i++;
+    }
+  }
+
+  return result;
+}
 
 export default function PlanDetailScreen() {
   const { planId, userId: queryUserId } = useLocalSearchParams<{ planId: string; userId?: string }>();
@@ -25,6 +90,7 @@ export default function PlanDetailScreen() {
   const targetUserId = queryUserId ?? user?.id;
 
   const { data: plans, isRefreshing, refresh } = usePlans(targetUserId);
+  const { data: history } = useExerciseHistory(targetUserId);
   const navigation = useNavigation();
 
   const plan = plans?.find((p) => String(p.id) === planId);
@@ -124,15 +190,7 @@ export default function PlanDetailScreen() {
       {plan.exercises.length === 0 ? (
         <EmptyState message="No exercises in this plan." />
       ) : (
-        plan.exercises.map((exercise, index) => (
-          <ExerciseItem
-            key={`${plan.id}-${index}`}
-            exercise={exercise}
-            index={index}
-            planId={plan.id}
-            onToggleDone={handleToggle}
-          />
-        ))
+        renderExercises(plan.exercises, plan.id, history ?? {}, handleToggle)
       )}
     </ScrollView>
   );
@@ -209,6 +267,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  supersetGroup: {
+    borderWidth: 1.5,
+    borderColor: colors.warning + '50',
+    borderRadius: 16,
+    borderStyle: 'dashed',
+    padding: 8,
+    paddingBottom: 0,
+    marginBottom: 10,
+    backgroundColor: colors.warning + '04',
+  },
+  supersetLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 6,
+    paddingHorizontal: 4,
+  },
+  supersetLabelTxt: {
+    color: colors.warning,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
 });

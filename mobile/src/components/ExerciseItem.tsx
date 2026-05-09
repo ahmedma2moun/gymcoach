@@ -10,12 +10,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/src/theme/colors';
-import type { PlanExercise } from '@/src/types/api';
+import type { PlanExercise, ExerciseHistoryEntry } from '@/src/types/api';
 
 type Props = {
   exercise: PlanExercise;
   index: number;
   planId: string;
+  lastEntry?: ExerciseHistoryEntry;
   onToggleDone: (
     index: number,
     done: boolean,
@@ -26,7 +27,7 @@ type Props = {
   disabled?: boolean;
 };
 
-export function ExerciseItem({ exercise, index, planId, onToggleDone, disabled }: Props) {
+export function ExerciseItem({ exercise, index, planId, lastEntry, onToggleDone, disabled }: Props) {
   const [weightKg, setWeightKg] = useState(exercise.weightKg ?? '');
   const [weightLbs, setWeightLbs] = useState(exercise.weightLbs ?? '');
   const [userNote, setUserNote] = useState(exercise.userNote ?? '');
@@ -81,11 +82,34 @@ export function ExerciseItem({ exercise, index, planId, onToggleDone, disabled }
               <View style={[styles.chip, styles.chipWeight]}>
                 <Ionicons name="barbell-outline" size={11} color={colors.primary} />
                 <Text style={[styles.chipText, { color: colors.primary }]}>
-                  {exercise.weightKg ? `${exercise.weightKg} kg` : `${exercise.weightLbs} lbs`}
+                  {exercise.weightKg && exercise.weightLbs
+                    ? `${exercise.weightKg} kg · ${exercise.weightLbs} lbs`
+                    : exercise.weightKg
+                      ? `${exercise.weightKg} kg`
+                      : `${exercise.weightLbs} lbs`}
+                </Text>
+              </View>
+            ) : (lastEntry?.weightKg || lastEntry?.weightLbs) ? (
+              <View style={[styles.chip, styles.chipWeightLast]}>
+                <Ionicons name="time-outline" size={11} color={colors.textMuted} />
+                <Text style={[styles.chipText, { color: colors.textMuted }]}>
+                  {lastEntry.weightKg && lastEntry.weightLbs
+                    ? `${lastEntry.weightKg} kg · ${lastEntry.weightLbs} lbs`
+                    : lastEntry.weightKg
+                      ? `${lastEntry.weightKg} kg`
+                      : `${lastEntry.weightLbs} lbs`}
                 </Text>
               </View>
             ) : null}
           </View>
+          {(exercise.userNote || lastEntry?.userNote) ? (
+            <Text
+              style={[styles.notePreview, !exercise.userNote && styles.notePreviewLast]}
+              numberOfLines={1}
+            >
+              {exercise.userNote || lastEntry?.userNote}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.actions}>
@@ -348,5 +372,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
     letterSpacing: 0.2,
+  },
+  notePreview: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  notePreviewLast: {
+    opacity: 0.55,
+  },
+  chipWeightLast: {
+    backgroundColor: colors.surface2,
+    borderColor: colors.borderSubtle,
   },
 });
